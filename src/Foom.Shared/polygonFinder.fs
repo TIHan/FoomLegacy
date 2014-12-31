@@ -1,9 +1,72 @@
-﻿// Ideas from Pascal vd Heiden's Doom Builder 2 C# triangulation code.
+﻿// Based off of Pascal vd Heiden's Doom Builder 2 C# triangulation code.
 [<RequireQualifiedAccess>]
 module Foom.Shared.PolygonFinder
 
+open System
 open System.Numerics
 open System.Collections.Immutable
+
+let pi = single Math.PI
+let pi2 = pi * 2.f
+
+let normalizeAngle a =
+    let mutable a = a
+    while a < 0.f do a <- a + pi2
+    while a >= pi2 do a <- a - pi2
+    a
+
+let diffAngle a b =
+    let mutable d = normalizeAngle a - normalizeAngle b
+    if d < 0.f then d <- d + pi2
+    if d > pi then d <- pi2 - d
+    d
+
+let sideOfLine (v1: Vector2) (v2: Vector2) (p: Vector2) =
+    (p.Y - v1.Y) * (v2.X - v1.X) - (p.X - v1.X) * (v2.Y - v1.Y)
+
+let calculateRelativeAngle (baseSide: Linedef) baseVertex (a: Linedef) (b: Linedef) =
+    let ana =
+        if a.End = baseVertex
+        then a.Angle + pi
+        else a.Angle
+
+    let anb =
+        if b.End = baseVertex
+        then b.Angle + pi
+        else b.Angle
+    
+    let mutable n = diffAngle ana anb
+
+    let va =
+        if a.Start = baseVertex
+        then a.End
+        else a.Start
+
+    let vb =
+        if b.Start = baseVertex
+        then b.End
+        else b.Start
+
+    let dir =
+        if baseSide.End = baseVertex
+        then not baseSide.FrontSidedef.IsSome
+        else baseSide.FrontSidedef.IsSome
+
+    let s = sideOfLine va vb baseVertex
+    if s < 0.f && dir then n <- pi2 - n
+    if s > 0.f && not dir then n <- pi2 - n
+
+    n
+
+let compareAngle baseSide baseVertex x y =
+    if x = y
+    then 0
+    else
+
+    let ax = calculateRelativeAngle baseSide baseVertex baseSide x
+    let ay = calculateRelativeAngle baseSide baseVertex baseSide y
+
+    Math.Sign(ay - ax)
 
 module Polygon =
     let ofLinedefs (sides: Linedef seq) =
@@ -13,10 +76,9 @@ module Polygon =
                 if x.FrontSidedef.IsSome
                 then x.Start
                 else x.End) 
-            |> Seq.distinct
             |> Array.ofSeq
 
-        { Vertices = vertices; Children = [] }
+        { Vertices = vertices.[..vertices.Length - 2]; Children = [] }
 
 type Tracer =
     private { 
@@ -63,26 +125,22 @@ type Tracer =
         match
             this.linedefs
             |> List.filter (fun l -> 
-                match l.FrontSidedef.IsSome with
-                | true -> currentVertex.Equals l.Start && not (visitedLinedefs.Contains l)
-                | _ ->    currentVertex.Equals l.End && not (visitedLinedefs.Contains l)) with
+                (currentVertex.Equals l.Start && not (visitedLinedefs.Contains l)) ||
+                (currentVertex.Equals l.End && not (visitedLinedefs.Contains l))) with
         | [] -> this, false
         | [path] -> this.Visit path, true
         | paths ->
-            let v1 =
+            let p =
                 if head.FrontSidedef.IsSome
-                then head.End - head.Start
-                else head.Start - head.End
+                then head.End
+                else head.Start
 
-            let path =
+            let paths =
                 paths
-                |> List.minBy (fun x ->
-                    let v2 =
-                        if x.FrontSidedef.IsSome
-                        then x.End - x.Start
-                        else x.Start - x.End
+                |> List.sortWith (fun x y ->
+                    compareAngle head p x y)
+            let path = paths.Head
 
-                    Vector3.Cross(Vector3 (v1, 0.f), Vector3 (v2, 0.f)).Z)
             this.Visit path, true
 
     member this.RemainingLinedefs =
@@ -126,7 +184,7 @@ let tryFindPolygon (linedefs: Linedef list) =
     Tracer.Create linedefs
     |> f
 
-let findPolygons sector =
+let find sector =
     let rec f (polygons: Polygon list) = function
         | [] -> polygons
         | linedefs -> 

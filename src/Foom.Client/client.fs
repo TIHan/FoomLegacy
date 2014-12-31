@@ -36,8 +36,8 @@ type State = {
 // 271 - map03 sunder
 
 let init () =
-    let wadFile = WadManager.openWad "freedoom1.wad"
-    let lvl = WadManager.loadLevel "e1m1" wadFile
+    let wadFile = WadManager.openWad "sunder.wad"
+    let lvl = WadManager.loadLevel "map10" wadFile
     let app = Renderer.init ()
     let vbo = Renderer.makeVbo ()
     let program = Backend.loadShaders ()
@@ -46,7 +46,13 @@ let init () =
 
     let sectorPolygons =
         lvl.Sectors
-        |> Array.map PolygonFinder.findPolygons
+        |> Array.mapi (fun i x -> 
+            //if i = 151 then
+            if true then 
+                let poly = PolygonFinder.find x
+                //printfn "POLYGONS: %A" poly.Length 
+                poly
+            else [])
 
     let vertices =
         match sectorPolygons with
@@ -84,7 +90,7 @@ let init () =
     { Renderer = rendererState
       Level = lvl
       ViewDistance = 1.f
-      ViewPosition = Vector3.Zero }
+      ViewPosition = Vector3 (-vertices.[0],0.f) }
 
 let update (state: State) =
     Input.inputEvents
