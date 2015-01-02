@@ -18,7 +18,7 @@ type RendererState = {
     VboLength: int
     Sectors: Polygon list [] }
 
-type State = {
+type ClientState = {
     Renderer: RendererState
     Level: Level
     ViewDistance: single
@@ -90,11 +90,11 @@ let init () =
     { Renderer = rendererState
       Level = lvl
       ViewDistance = 1.f
-      ViewPosition = Vector3 (-vertices.[0],0.f) }
+      ViewPosition = Vector3.Zero }
 
-let update (state: State) =
-    Input.inputEvents
-    |> Seq.fold (fun state e -> 
+let update (input: InputState) (client: ClientState) =
+    input.Events
+    |> List.fold (fun state e -> 
         match e with
         | MouseWheelScrolled (x, y) ->
             let viewDistance =
@@ -105,9 +105,15 @@ let update (state: State) =
 
             { state with 
                 ViewDistance = viewDistance }
-        | _ -> state) state
+        | MouseButtonPressed x ->
+            printfn "%A Pressed" x 
+            state
+        | MouseButtonReleased x ->
+            printfn "%A Released" x
+            state
+        | _ -> state) client
 
-let draw t (prev: State) (curr: State) =
+let draw t (prev: ClientState) (curr: ClientState) =
     Renderer.clear ()
 
     let projection = Matrix4x4.CreatePerspectiveFieldOfView (lerp prev.ViewDistance curr.ViewDistance t, (16.f / 9.f), 0.1f, 100.f) |> Matrix4x4.Transpose

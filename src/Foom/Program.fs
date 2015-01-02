@@ -100,13 +100,13 @@ let main argv =
     Runtime.GCSettings.LatencyMode <- Runtime.GCLatencyMode.Batch
     GameLoop.start (Client.init ())
         (fun () ->
-            Input.pollInputEvents ()
+            Input.pollEvents ()
         )
-        (fun time interval state ->
+        (fun time interval client ->
             GC.Collect ()
-            let state = Client.update state
-            Input.inputEvents.Clear ()
-            state
+            let input = Input.getState ()
+            let client = Client.update input client
+            client
         ) 
         (Client.draw
         )

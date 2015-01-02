@@ -62,6 +62,7 @@
   <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
   <Import Project="..\..\packages\Ferop.1.0.0-beta4\build\Ferop.targets" Condition="Exists('..\..\packages\Ferop.1.0.0-beta4\build\Ferop.targets')" />
   <ItemGroup>
+    <Compile Include="input.fsi" />
     <Compile Include="input.fs" />
     <Compile Include="client.fs" />
     <Content Include="packages.config" />

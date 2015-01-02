@@ -2,10 +2,30 @@
 
 open Ferop
 
+open System.Runtime.InteropServices
+
+type MouseButtonType =
+    | Left = 1
+    | Middle = 2
+    | Right = 3
+    | X1 = 4
+    | X2 = 5
+
 type InputEvent =
     | KeyPressed of char
     | KeyReleased of char
+    | MouseButtonPressed of MouseButtonType
+    | MouseButtonReleased of MouseButtonType
     | MouseWheelScrolled of x: int * y: int
+
+[<Struct>]
+type MouseState =
+    val X : int
+    val Y : int
+
+type InputState = 
+    { Events: InputEvent list 
+      Mouse: MouseState }
 
 [<Struct>]
 type KeyboardEvent =
@@ -13,14 +33,18 @@ type KeyboardEvent =
     val KeyCode : int
 
 [<Struct>]
-type MouseWheelEvent =
+type MouseButtonEvent =
+    val IsPressed : int
+    val Clicks : int
+    val Button : MouseButtonType
     val X : int
     val Y : int
 
 [<Struct>]
-type MouseState =
+type MouseWheelEvent =
     val X : int
     val Y : int
+
 
 [<Ferop>]
 [<ClangOsx (
@@ -44,17 +68,25 @@ module Input =
     [<Export>]
     let dispatchKeyboardEvent (kbEvt: KeyboardEvent) : unit =
         inputEvents.Add (
-            if kbEvt.IsPressed = 1 then 
-                InputEvent.KeyPressed (char kbEvt.KeyCode) 
+            if kbEvt.IsPressed = 0 then 
+                InputEvent.KeyReleased (char kbEvt.KeyCode) 
             else 
-                InputEvent.KeyReleased (char kbEvt.KeyCode))
+                InputEvent.KeyPressed (char kbEvt.KeyCode))
+
+    [<Export>]
+    let dispatchMouseButtonEvent (mbEvt: MouseButtonEvent) : unit =
+        inputEvents.Add (
+            if mbEvt.IsPressed = 0 then
+                InputEvent.MouseButtonReleased (mbEvt.Button)
+            else
+                InputEvent.MouseButtonPressed (mbEvt.Button))
 
     [<Export>]
     let dispatchMouseWheelEvent (evt: MouseWheelEvent) : unit =
         inputEvents.Add (InputEvent.MouseWheelScrolled (evt.X, evt.Y))
 
     [<Import; MI (MIO.NoInlining)>]
-    let pollInputEvents () : unit =
+    let pollEvents () : unit =
         C """
 SDL_Event e;
 while (SDL_PollEvent (&e))
@@ -81,6 +113,32 @@ while (SDL_PollEvent (&e))
 
         Input_dispatchKeyboardEvent (evt);
     }
+    else if (e.type == SDL_MOUSEBUTTONDOWN)
+    {
+        SDL_MouseButtonEvent* event = (SDL_MouseButtonEvent*)&e;
+        
+        Input_MouseButtonEvent evt;
+        evt.IsPressed = 1;
+        evt.Clicks = event->clicks;
+        evt.Button = event->button;
+        evt.X = event->x;
+        evt.Y = event->y;
+
+        Input_dispatchMouseButtonEvent (evt);
+    }
+    else if (e.type == SDL_MOUSEBUTTONUP)
+    {
+        SDL_MouseButtonEvent* event = (SDL_MouseButtonEvent*)&e;
+        
+        Input_MouseButtonEvent evt;
+        evt.IsPressed = 0;
+        evt.Clicks = event->clicks;
+        evt.Button = event->button;
+        evt.X = event->x;
+        evt.Y = event->y;
+
+        Input_dispatchMouseButtonEvent (evt);
+    }
     else if (e.type == SDL_MOUSEWHEEL)
     {
         SDL_MouseWheelEvent* event = (SDL_MouseWheelEvent*)&e;
@@ -105,3 +163,11 @@ state.X = x;
 state.Y = y;
 return state;
         """
+
+    let getState () : InputState =
+        let mouse = getMouseState ()
+        let events = inputEvents |> List.ofSeq
+        inputEvents.Clear ()
+        { Mouse = mouse
+          Events = events }
+        
