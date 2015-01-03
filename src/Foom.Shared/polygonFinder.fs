@@ -196,7 +196,7 @@ let find sector =
                         Polygon.isPointInside x.Start poly &&
                         Polygon.isPointInside x.End poly)
 
-                let poly = { poly with Children = f [] linedefsInPolygon }
+                let poly = Polygon.addChildren (f [] linedefsInPolygon) poly
             
                 f (poly :: polygons) linedefs
             | _, sides -> f polygons sides

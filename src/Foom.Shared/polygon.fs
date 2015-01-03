@@ -2,10 +2,32 @@
 
 open System.Numerics
 
+[<Struct>]
+type Edge = 
+    val X : Vector2
+    val Y : Vector2
+
+    new (x, y) = { X = x; Y = y }
+
 type Polygon = { Vertices: Vector2 []; Children: Polygon list }
 
 [<CompilationRepresentationAttribute (CompilationRepresentationFlags.ModuleSuffix)>]
 module Polygon =
+    let inline addChild child poly = { poly with Children = child :: poly.Children }
+
+    let inline addChildren children poly = { poly with Children = poly.Children @ children }
+
+    let edges poly =
+        let length = poly.Vertices.Length
+
+        poly.Vertices
+        |> Array.mapi (fun i y ->
+            let x =
+                match i with
+                | 0 -> poly.Vertices.[length - 1]
+                | _ -> poly.Vertices.[i - 1]
+            Edge (x, y))        
+
     // http://alienryderflex.com/polygon/
     let isPointInside (point: Vector2) (poly: Polygon) =
         let vertices =  poly.Vertices
