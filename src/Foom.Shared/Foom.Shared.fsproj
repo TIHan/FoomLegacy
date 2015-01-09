@@ -67,6 +67,7 @@
     <Compile Include="polygonFinder.fs" />
     <Compile Include="earClipping.fsi" />
     <Compile Include="earClipping.fs" />
+    <Compile Include="userCommand.fs" />
     <Content Include="packages.config" />
   </ItemGroup>
   <ItemGroup>

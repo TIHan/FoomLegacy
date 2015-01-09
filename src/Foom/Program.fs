@@ -95,19 +95,52 @@ module GameLoop =
               RenderFrameCountTime = 0L
               RenderFrameLastCount = 0 }
 
+open Foom.Client
+open Foom.Shared.UserCommand
+
+type GameState = {
+    UserCommandState: UserCommandState
+    Client: Client.ClientState }
+
 [<EntryPoint>]
 let main argv = 
     Runtime.GCSettings.LatencyMode <- Runtime.GCLatencyMode.Batch
-    GameLoop.start (Client.init ())
+
+    let inputEventsToClientCommands (input: InputState) (state: GameState) =
+        let cmdState =
+            input.Events
+            |> List.fold (fun (cmdState: UserCommandState) evt ->
+                match evt with
+
+                | MouseWheelScrolled (_, x) ->
+                    match x with
+                    | x when x < 0 -> cmdState.SetCommand UserCommand.MapZoomIn
+                    | x when x > 0 -> cmdState.SetCommand UserCommand.MapZoomOut
+                    | _ -> cmdState
+
+                | MouseButtonPressed MouseButtonType.Left -> cmdState.SetCommand UserCommand.MapMove
+                | MouseButtonReleased MouseButtonType.Left -> cmdState.SetCommand UserCommand.MapMove
+
+                | _ -> cmdState
+            ) (state.UserCommandState.ClearCommands ())
+        cmdState.SetMousePosition { X = input.Mouse.X; Y = input.Mouse.Y }
+
+    GameLoop.start { UserCommandState = UserCommandState.Create ([UserCommand.MapMove]); Client = Client.init () }
         (fun () ->
             Input.pollEvents ()
         )
-        (fun time interval client ->
+        (fun time interval curr ->
             GC.Collect ()
+
             let input = Input.getState ()
-            let client = Client.update input client
-            client
+
+            let cmdState = inputEventsToClientCommands input curr
+
+            let client = Client.update cmdState curr.Client
+            
+            { curr with UserCommandState = cmdState; Client = client }
         ) 
-        (Client.draw
+        (fun t prev curr ->
+            Client.draw t prev.Client curr.Client
         )
     0

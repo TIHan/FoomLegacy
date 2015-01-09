@@ -6,6 +6,7 @@ open System.Numerics
 
 open Foom.Renderer
 open Foom.Shared
+open Foom.Shared.UserCommand
 
 let inline lerp x y t = x + (y - x) * t
 
@@ -92,26 +93,38 @@ let init () =
       ViewDistance = 1.f
       ViewPosition = Vector3.Zero }
 
-let update (input: InputState) (client: ClientState) =
-    input.Events
+let update (cmdState: UserCommandState) (client: ClientState) =
+    let mouseState = cmdState.MousePosition
+
+    cmdState.Commands @ cmdState.ToggledCommands
     |> List.fold (fun state e -> 
         match e with
-        | MouseWheelScrolled (x, y) ->
+        | UserCommand.MapZoomIn ->
             let viewDistance =
-                match state.ViewDistance + single y / (2.f / state.ViewDistance) with
+                match state.ViewDistance + single -1.f / (2.f / state.ViewDistance) with
                 | x when x <= 0.001f -> 0.001f
                 | x when x >= 2.f -> 2.f
                 | x -> x
 
             { state with 
                 ViewDistance = viewDistance }
-        | MouseButtonPressed x ->
-            printfn "%A Pressed" x 
-            state
-        | MouseButtonReleased x ->
-            printfn "%A Released" x
-            state
-        | _ -> state) client
+
+        | UserCommand.MapZoomOut ->
+            let viewDistance =
+                match state.ViewDistance + single 1.f / (2.f / state.ViewDistance) with
+                | x when x <= 0.001f -> 0.001f
+                | x when x >= 2.f -> 2.f
+                | x -> x
+
+            { state with 
+                ViewDistance = viewDistance }
+
+        | UserCommand.MapMove ->
+            { state with
+                ViewPosition = Vector3 (-(single mouseState.X / 65536.f) * 8.f, (single mouseState.Y / 65536.f) * 8.f, 0.f) }
+
+        | _ -> state
+    ) client
 
 let draw t (prev: ClientState) (curr: ClientState) =
     Renderer.clear ()
