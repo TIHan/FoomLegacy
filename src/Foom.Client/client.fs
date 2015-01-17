@@ -64,7 +64,7 @@ let init () =
                 |> Array.map (fun x ->
                     let vlist = 
                         x 
-                        |> List.map (fun x -> x.Vertices) 
+                        |> List.map (fun x -> Polygon.vertices x) 
                     match vlist with
                     | [] -> [||]
                     | _ ->
@@ -146,8 +146,9 @@ let draw t (prev: ClientState) (curr: ClientState) =
         | _ ->
             sector
             |> List.fold (fun count poly ->
-                Renderer.drawArraysLoop count poly.Vertices.Length
-                count + poly.Vertices.Length) count
+                let vertices = Polygon.vertices poly
+                Renderer.drawArraysLoop count vertices.Length
+                count + vertices.Length) count
     ) 0
     |> ignore
 

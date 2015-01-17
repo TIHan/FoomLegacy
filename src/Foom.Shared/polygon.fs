@@ -1,5 +1,6 @@
 ﻿namespace Foom.Shared
 
+open System
 open System.Numerics
 
 [<Struct>]
@@ -13,9 +14,15 @@ type Polygon = { Vertices: Vector2 []; Children: Polygon list }
 
 [<CompilationRepresentationAttribute (CompilationRepresentationFlags.ModuleSuffix)>]
 module Polygon =
-    let inline addChild child poly = { poly with Children = child :: poly.Children }
+    let create vertices = { Vertices = vertices; Children = [] }
 
-    let inline addChildren children poly = { poly with Children = poly.Children @ children }
+    let addChild child poly = { poly with Children = child :: poly.Children }
+
+    let addChildren children poly = { poly with Children = poly.Children @ children }
+
+    let vertices poly = poly.Vertices
+
+    let children poly = poly.Children
 
     let edges poly =
         let length = poly.Vertices.Length
@@ -26,7 +33,27 @@ module Polygon =
                 match i with
                 | 0 -> poly.Vertices.[length - 1]
                 | _ -> poly.Vertices.[i - 1]
-            Edge (x, y))        
+            Edge (x, y))
+        |> List.ofArray
+
+    let sign = function
+        | x when x <= 0.f -> false
+        | _ -> true
+
+    let cross v1 v2 = (Vector3.Cross (Vector3(v1, 0.f), Vector3(v2, 0.f))).Z
+        
+    let isArrangedClockwise poly =
+        let length = poly.Vertices.Length
+
+        poly.Vertices
+        |> Array.mapi (fun i y ->
+            let x =
+                match i with
+                | 0 -> poly.Vertices.[length - 1]
+                | _ -> poly.Vertices.[i - 1]
+            cross x y)                
+        |> Array.reduce ((+))
+        |> sign
 
     // http://alienryderflex.com/polygon/
     let isPointInside (point: Vector2) (poly: Polygon) =

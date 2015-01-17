@@ -5,4 +5,5 @@ open System.Numerics
 
 open Foom.Shared
 
-let compute (poly: Polygon) = List.empty<Vector2 []>
+let compute (poly: Polygon) =
+    List.empty<Triangle2>

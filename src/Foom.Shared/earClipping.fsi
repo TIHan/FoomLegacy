@@ -1,8 +1,6 @@
 ﻿[<RequireQualifiedAccess>]
 module Foom.Shared.Triangulation.EarClipping
 
-open System.Numerics
-
 open Foom.Shared
 
-val compute : Polygon -> Vector2 [] list
+val compute : Polygon -> Triangle2 list

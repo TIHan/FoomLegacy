@@ -78,7 +78,7 @@ module Polygon =
                 else x.End) 
             |> Array.ofSeq
 
-        { Vertices = vertices.[..vertices.Length - 2]; Children = [] }
+        Polygon.create vertices.[..vertices.Length - 2]
 
 type Tracer =
     private { 
