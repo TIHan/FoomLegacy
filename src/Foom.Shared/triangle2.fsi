@@ -13,3 +13,5 @@ module Triangle2 =
     val create : Vector2 -> Vector2 -> Vector2 -> Triangle2
 
     val toPolygon : Triangle2 -> Polygon
+
+    val isPointInside : Vector2 -> Triangle2 -> bool

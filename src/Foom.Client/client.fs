@@ -37,8 +37,8 @@ type ClientState = {
 // 271 - map03 sunder
 
 let init () =
-    let wadFile = WadManager.openWad "sunder.wad"
-    let lvl = WadManager.loadLevel "map10" wadFile
+    let wadFile = WadManager.openWad "doom.wad"
+    let lvl = WadManager.loadLevel "e1m1" wadFile
     let app = Renderer.init ()
     let vbo = Renderer.makeVbo ()
     let program = Backend.loadShaders ()
@@ -48,8 +48,8 @@ let init () =
     let sectorPolygons =
         lvl.Sectors
         |> Array.mapi (fun i x -> 
-            //if i = 151 then
-            if true then 
+            if i = 56 then
+            //if true then 
                 let poly = PolygonFinder.find x
                 //printfn "POLYGONS: %A" poly.Length 
                 poly
