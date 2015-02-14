@@ -11,17 +11,17 @@ type MouseButtonType =
     | X1 = 4
     | X2 = 5
 
+[<Struct>]
+type MouseState =
+    val X : int
+    val Y : int
+
 type InputEvent =
     | KeyPressed of char
     | KeyReleased of char
     | MouseButtonPressed of MouseButtonType
     | MouseButtonReleased of MouseButtonType
     | MouseWheelScrolled of x: int * y: int
-
-[<Struct>]
-type MouseState =
-    val X : int
-    val Y : int
 
 type InputState = 
     { Events: InputEvent list 

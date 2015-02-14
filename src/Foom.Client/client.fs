@@ -10,6 +10,11 @@ open Foom.Shared.UserCommand
 
 let inline lerp x y t = x + (y - x) * t
 
+type UserState = {
+    IsMapMoving: bool } with
+
+    static member Default = { IsMapMoving = false }
+
 type RendererState = {
     UniformColor: int<uniform>
     UniformProjection: int<uniform>
@@ -17,10 +22,12 @@ type RendererState = {
     Application: Application
     Vbo: int
     VboLength: int
+    DrawVbo: unit -> unit
     Sectors: Polygon list [] }
 
 type ClientState = {
     Renderer: RendererState
+    User: UserState
     Level: Level
     ViewDistance: single
     ViewPosition: Vector3 }
@@ -37,8 +44,8 @@ type ClientState = {
 // 271 - map03 sunder
 
 let init () =
-    let wadFile = WadManager.openWad "doom.wad"
-    let lvl = WadManager.loadLevel "e1m1" wadFile
+    let wadFile = WadManager.openWad "sunder.wad"
+    let lvl = WadManager.loadLevel "map10" wadFile
     let app = Renderer.init ()
     let vbo = Renderer.makeVbo ()
     let program = Backend.loadShaders ()
@@ -47,13 +54,7 @@ let init () =
 
     let sectorPolygons =
         lvl.Sectors
-        |> Array.mapi (fun i x -> 
-            if i = 56 then
-            //if true then 
-                let poly = PolygonFinder.find x
-                //printfn "POLYGONS: %A" poly.Length 
-                poly
-            else [])
+        |> Array.map PolygonFinder.find
 
     let vertices =
         match sectorPolygons with
@@ -79,6 +80,22 @@ let init () =
 
     Renderer.bufferVbo vertices (sizeof<Vector2> * vertices.Length) vbo
 
+    let index = ref 0
+    let arr = ResizeArray<unit -> unit> ()
+    sectorPolygons
+    |> Array.fold (fun count sector ->
+        index := !index + 1
+        match sector with
+        | [] -> count
+        | _ ->
+            sector
+            |> List.fold (fun count poly ->
+                let vertices = Polygon.vertices poly
+                arr.Add (fun () -> Renderer.drawArraysLoop count vertices.Length)
+                count + vertices.Length) count
+    ) 0
+    |> ignore        
+
     let rendererState =
         { UniformColor = uniformColor
           UniformProjection = uniformProjection
@@ -86,45 +103,59 @@ let init () =
           Application = app 
           Vbo = vbo
           VboLength = vertices.Length
+          DrawVbo = fun () -> arr.ForEach (fun x -> x ())
           Sectors = sectorPolygons }
     
     { Renderer = rendererState
+      User = UserState.Default
       Level = lvl
       ViewDistance = 1.f
       ViewPosition = Vector3.Zero }
 
-let update (cmdState: UserCommandState) (client: ClientState) =
-    let mouseState = cmdState.MousePosition
+let update (userCmd: UserCommandState) (mouse: MouseState) (client: ClientState) =
+    let cmds = userCmd.Commands
 
-    cmdState.Commands @ cmdState.ToggledCommands
-    |> List.fold (fun state e -> 
-        match e with
-        | UserCommand.MapZoomIn ->
-            let viewDistance =
-                match state.ViewDistance + single -1.f / (2.f / state.ViewDistance) with
-                | x when x <= 0.001f -> 0.001f
-                | x when x >= 2.f -> 2.f
-                | x -> x
+    let client =
+        cmds
+        |> List.fold (fun state e -> 
+            match e with
+            | UserCommand.MapZoomIn ->
+                let viewDistance =
+                    match state.ViewDistance + single -1.f / (2.f / state.ViewDistance) with
+                    | x when x <= 0.001f -> 0.001f
+                    | x when x >= 2.f -> 2.f
+                    | x -> x
 
-            { state with 
-                ViewDistance = viewDistance }
+                { state with 
+                    ViewDistance = viewDistance }
 
-        | UserCommand.MapZoomOut ->
-            let viewDistance =
-                match state.ViewDistance + single 1.f / (2.f / state.ViewDistance) with
-                | x when x <= 0.001f -> 0.001f
-                | x when x >= 2.f -> 2.f
-                | x -> x
+            | UserCommand.MapZoomOut ->
+                let viewDistance =
+                    match state.ViewDistance + single 1.f / (2.f / state.ViewDistance) with
+                    | x when x <= 0.001f -> 0.001f
+                    | x when x >= 2.f -> 2.f
+                    | x -> x
 
-            { state with 
-                ViewDistance = viewDistance }
+                { state with 
+                    ViewDistance = viewDistance }
 
-        | UserCommand.MapMove ->
-            { state with
-                ViewPosition = Vector3 (-(single mouseState.X / 65536.f) * 8.f, (single mouseState.Y / 65536.f) * 8.f, 0.f) }
+            | UserCommand.BeginMapMove -> { state with User = { state.User with IsMapMoving = true } }
+            | UserCommand.EndMapMove -> { state with User = { state.User with IsMapMoving = false } }
 
-        | _ -> state
-    ) client
+            | _ -> state
+        ) client
+
+
+    let client =
+        match client.User.IsMapMoving with
+        | true ->
+            let x = (single mouse.X / (1280.f / 2.f)) - 1.f
+            let y = (single mouse.Y / (720.f / 2.f)) - 1.f
+            let viewPosition = Vector3 (-x, y, 0.f)
+            { client with ViewPosition = viewPosition }
+        | _ -> client
+
+    client
 
 let draw t (prev: ClientState) (curr: ClientState) =
     Renderer.clear ()
@@ -136,20 +167,6 @@ let draw t (prev: ClientState) (curr: ClientState) =
     Renderer.setUniformProjection curr.Renderer.UniformProjection mvp
     Renderer.setUniformColor curr.Renderer.UniformColor (RenderColor.OfColor Color.White)
 
-    let index = ref 0
-
-    curr.Renderer.Sectors
-    |> Array.fold (fun count sector ->
-        index := !index + 1
-        match sector with
-        | [] -> count
-        | _ ->
-            sector
-            |> List.fold (fun count poly ->
-                let vertices = Polygon.vertices poly
-                Renderer.drawArraysLoop count vertices.Length
-                count + vertices.Length) count
-    ) 0
-    |> ignore
+    curr.Renderer.DrawVbo () 
 
     Renderer.draw curr.Renderer.Application

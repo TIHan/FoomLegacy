@@ -1,6 +1,5 @@
 ﻿open System
 open System.IO
-open System.Drawing
 open System.Diagnostics
 open System.Numerics
 
@@ -99,33 +98,30 @@ open Foom.Client
 open Foom.Shared.UserCommand
 
 type GameState = {
-    UserCommandState: UserCommandState
     Client: Client.ClientState }
 
 [<EntryPoint>]
 let main argv = 
     Runtime.GCSettings.LatencyMode <- Runtime.GCLatencyMode.Batch
 
-    let inputEventsToClientCommands (input: InputState) (state: GameState) =
-        let cmdState =
-            input.Events
-            |> List.fold (fun (cmdState: UserCommandState) evt ->
-                match evt with
+    let inputStateToCommandAndMouseState (input: InputState) (state: GameState) =
+        input.Events
+        |> List.fold (fun (userCmd: UserCommandState) evt ->
+            match evt with
 
-                | MouseWheelScrolled (_, x) ->
-                    match x with
-                    | x when x < 0 -> cmdState.SetCommand UserCommand.MapZoomIn
-                    | x when x > 0 -> cmdState.SetCommand UserCommand.MapZoomOut
-                    | _ -> cmdState
+            | MouseWheelScrolled (_, x) ->
+                match x with
+                | x when x < 0 -> userCmd.Add UserCommand.MapZoomIn
+                | x when x > 0 -> userCmd.Add UserCommand.MapZoomOut
+                | _ -> userCmd
 
-                | MouseButtonPressed MouseButtonType.Left -> cmdState.SetCommand UserCommand.MapMove
-                | MouseButtonReleased MouseButtonType.Left -> cmdState.SetCommand UserCommand.MapMove
+            | MouseButtonPressed MouseButtonType.Left -> userCmd.Add UserCommand.BeginMapMove
+            | MouseButtonReleased MouseButtonType.Left -> userCmd.Add UserCommand.EndMapMove
 
-                | _ -> cmdState
-            ) (state.UserCommandState.ClearCommands ())
-        cmdState.SetMousePosition { X = input.Mouse.X; Y = input.Mouse.Y }
+            | _ -> userCmd
+        ) (UserCommandState.Default), input.Mouse
 
-    GameLoop.start { UserCommandState = UserCommandState.Create ([UserCommand.MapMove]); Client = Client.init () }
+    GameLoop.start { Client = Client.init () }
         (fun () ->
             Input.pollEvents ()
         )
@@ -134,11 +130,11 @@ let main argv =
 
             let input = Input.getState ()
 
-            let cmdState = inputEventsToClientCommands input curr
+            let userCmd, mouse = inputStateToCommandAndMouseState input curr
 
-            let client = Client.update cmdState curr.Client
+            let client = Client.update userCmd mouse curr.Client
             
-            { curr with UserCommandState = cmdState; Client = client }
+            { curr with Client = client }
         ) 
         (fun t prev curr ->
             Client.draw t prev.Client curr.Client
