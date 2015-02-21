@@ -24,7 +24,7 @@ let diffAngle a b =
 let sideOfLine (v1: Vector2) (v2: Vector2) (p: Vector2) =
     (p.Y - v1.Y) * (v2.X - v1.X) - (p.X - v1.X) * (v2.Y - v1.Y)
 
-let calculateRelativeAngle (baseSide: Linedef) baseVertex (a: Linedef) (b: Linedef) =
+let calculateRelativeAngle baseVertex (a: Linedef) (b: Linedef) =
     let ana =
         if a.End = baseVertex
         then a.Angle + pi
@@ -48,25 +48,15 @@ let calculateRelativeAngle (baseSide: Linedef) baseVertex (a: Linedef) (b: Lined
         else b.Start
 
     let dir =
-        if baseSide.End = baseVertex
-        then not baseSide.FrontSidedef.IsSome
-        else baseSide.FrontSidedef.IsSome
+        if a.End = baseVertex
+        then not a.FrontSidedef.IsSome
+        else a.FrontSidedef.IsSome
 
     let s = sideOfLine va vb baseVertex
     if s < 0.f && dir then n <- pi2 - n
     if s > 0.f && not dir then n <- pi2 - n
 
     n
-
-let compareAngle baseSide baseVertex x y =
-    if x = y
-    then 0
-    else
-
-    let ax = calculateRelativeAngle baseSide baseVertex baseSide x
-    let ay = calculateRelativeAngle baseSide baseVertex baseSide y
-
-    Math.Sign(ay - ax)
 
 module Polygon =
     let ofLinedefs (sides: Linedef seq) =
@@ -135,11 +125,9 @@ type Tracer =
                 then head.End
                 else head.Start
 
-            let paths =
+            let path =
                 paths
-                |> List.sortWith (fun x y ->
-                    compareAngle head p x y)
-            let path = paths.Head
+                |> List.maxBy (calculateRelativeAngle currentVertex head)
 
             this.Visit path, true
 
