@@ -1,6 +1,6 @@
 ﻿[<RequireQualifiedAccess>]
-module Foom.Shared.Triangulation.EarClipping
+module Foom.Shared.Geometry.Triangulation.EarClipping
 
-open Foom.Shared
+open Foom.Shared.Geometry
 
 val compute : Polygon -> Triangle2 list

@@ -57,18 +57,21 @@
     <Error Condition="!Exists('$(SolutionDir)\.nuget\NuGet.targets')" Text="$([System.String]::Format('$(ErrorText)', '$(SolutionDir)\.nuget\NuGet.targets'))" />
   </Target>
   <ItemGroup>
-    <Compile Include="types.fs" />
-    <Compile Include="wad.fs" />
-    <Compile Include="unpickleWad.fs" />
-    <Compile Include="wadManager.fs" />
+    <Compile Include="vec2.fs" />
     <Compile Include="polygon.fsi" />
     <Compile Include="polygon.fs" />
     <Compile Include="triangle2.fsi" />
     <Compile Include="triangle2.fs" />
-    <Compile Include="polygonFinder.fsi" />
-    <Compile Include="polygonFinder.fs" />
     <Compile Include="earClipping.fsi" />
     <Compile Include="earClipping.fs" />
+    <Compile Include="sidedef.fs" />
+    <Compile Include="linedef.fs" />
+    <Compile Include="sector.fsi" />
+    <Compile Include="sector.fs" />
+    <Compile Include="level.fs" />
+    <Compile Include="wad.fs" />
+    <Compile Include="unpickleWad.fs" />
+    <Compile Include="wadManager.fs" />
     <Compile Include="userCommand.fs" />
     <Content Include="packages.config" />
   </ItemGroup>

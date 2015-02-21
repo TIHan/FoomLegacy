@@ -5,8 +5,11 @@ open System.Drawing
 open System.Numerics
 
 open Foom.Renderer
-open Foom.Shared
+open Foom.Shared.IO
 open Foom.Shared.UserCommand
+open Foom.Shared.Geometry
+open Foom.Shared.Level
+open Foom.Shared.Level.Structures
 
 let inline lerp x y t = x + (y - x) * t
 
@@ -54,7 +57,7 @@ let init () =
 
     let sectorPolygons =
         lvl.Sectors
-        |> Array.map PolygonFinder.find
+        |> Array.map Sector.polygons
 
     let vertices =
         match sectorPolygons with

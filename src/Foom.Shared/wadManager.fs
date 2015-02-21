@@ -1,4 +1,4 @@
-﻿namespace Foom.Shared
+﻿namespace Foom.Shared.IO
 
 open System
 open System.IO
@@ -8,6 +8,9 @@ open FSharp.LitePickler.Unpickle
 
 open FSharp.Game.Data.Wad
 open FSharp.Game.Data.Wad.Unpickle
+
+open Foom.Shared.Level
+open Foom.Shared.Level.Structures
 
 type WadFile = private {
     File: FileStream

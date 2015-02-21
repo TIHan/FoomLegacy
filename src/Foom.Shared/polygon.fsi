@@ -1,4 +1,4 @@
-﻿namespace Foom.Shared
+﻿namespace Foom.Shared.Geometry
 
 open System.Numerics
 

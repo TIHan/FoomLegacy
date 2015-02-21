@@ -1,9 +1,9 @@
 ﻿[<RequireQualifiedAccess>]
-module Foom.Shared.Triangulation.EarClipping
+module Foom.Shared.Geometry.Triangulation.EarClipping
 
 open System.Numerics
 
-open Foom.Shared
+open Foom.Shared.Geometry
 
 let compute (poly: Polygon) =
     List.empty<Triangle2>
