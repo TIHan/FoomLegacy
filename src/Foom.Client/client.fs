@@ -46,14 +46,15 @@ type ClientState = {
 // 439 - map08 sunder
 // 271 - map03 sunder
 
-let init () =
+let init () = async {
     let wadFile = WadManager.openWad "sunder.wad"
     let lvl = WadManager.loadLevel "map10" wadFile
-    let app = Renderer.init ()
-    let vbo = Renderer.makeVbo ()
-    let program = Backend.loadShaders ()
-    let uniformColor = Renderer.getUniformColor program
-    let uniformProjection = Renderer.getUniformProjection program
+
+    let! app = Renderer.init ()
+    let! vbo = Renderer.makeVbo ()
+    let! program = Backend.loadShaders ()
+    let! uniformColor = Renderer.getUniformColor program
+    let! uniformProjection = Renderer.getUniformProjection program
 
     let sectorPolygons =
         lvl.Sectors
@@ -81,7 +82,7 @@ let init () =
                 vertexList
                 |> Array.reduce Array.append
 
-    Renderer.bufferVbo vertices (sizeof<Vector2> * vertices.Length) vbo
+    do! Renderer.bufferVbo vertices (sizeof<Vector2> * vertices.Length) vbo
 
     let index = ref 0
     let arr = ResizeArray<unit -> unit> ()
@@ -94,7 +95,7 @@ let init () =
             sector
             |> List.fold (fun count poly ->
                 let vertices = Polygon.vertices poly
-                arr.Add (fun () -> Renderer.drawArraysLoop count vertices.Length)
+                arr.Add (fun () -> Renderer._drawArraysLoop count vertices.Length)
                 count + vertices.Length) count
     ) 0
     |> ignore        
@@ -109,13 +110,15 @@ let init () =
           DrawVbo = fun () -> arr.ForEach (fun x -> x ())
           Sectors = sectorPolygons }
     
-    { Renderer = rendererState
-      User = UserState.Default
-      Level = lvl
-      ViewDistance = 1.f
-      ViewPosition = Vector3.Zero }
+    return 
+        { Renderer = rendererState
+          User = UserState.Default
+          Level = lvl
+          ViewDistance = 1.f
+          ViewPosition = Vector3.Zero }
+}
 
-let update (userCmd: UserCommandState) (mouse: MouseState) (client: ClientState) =
+let update (userCmd: UserCommandState) (mouse: MouseState) (client: ClientState) = async {
     let cmds = userCmd.Commands
 
     let client =
@@ -158,18 +161,20 @@ let update (userCmd: UserCommandState) (mouse: MouseState) (client: ClientState)
             { client with ViewPosition = viewPosition }
         | _ -> client
 
-    client
+    return client
+}
 
-let draw t (prev: ClientState) (curr: ClientState) =
-    Renderer.clear ()
+let draw t (prev: ClientState) (curr: ClientState) = async {
+    do! Renderer.clear ()
 
     let projection = Matrix4x4.CreatePerspectiveFieldOfView (lerp prev.ViewDistance curr.ViewDistance t, (16.f / 9.f), 0.1f, 100.f) |> Matrix4x4.Transpose
     let model = Matrix4x4.CreateTranslation (lerp prev.ViewPosition curr.ViewPosition t) |> Matrix4x4.Transpose
     let mvp = (projection * model) |> Matrix4x4.Transpose
 
-    Renderer.setUniformProjection curr.Renderer.UniformProjection mvp
-    Renderer.setUniformColor curr.Renderer.UniformColor (RenderColor.OfColor Color.White)
+    do! Renderer.setUniformProjection curr.Renderer.UniformProjection mvp
+    do! Renderer.setUniformColor curr.Renderer.UniformColor (RenderColor.OfColor Color.White)
 
     curr.Renderer.DrawVbo () 
 
-    Renderer.draw curr.Renderer.Application
+    do!Renderer.draw curr.Renderer.Application
+}
