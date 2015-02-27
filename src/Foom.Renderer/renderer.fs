@@ -62,7 +62,7 @@ char ProgramErrorMessage[65536];
 module Renderer =
 
     [<Import; MI (MIO.NoInlining)>]
-    let private _init () : Application =
+    let init () : Application =
         C """
 SDL_Init (SDL_INIT_VIDEO);
 
@@ -92,31 +92,23 @@ glewInit ();
 return app;
         """
 
-    let init () : Async<Application> = async { return _init () }
-
     [<Import; MI (MIO.NoInlining)>]
-    let private _exit (app: Application) : int =
+    let exit (app: Application) : int =
         C """
 SDL_GL_DeleteContext (app.GLContext);
 SDL_DestroyWindow ((SDL_Window*)app.Window);
 SDL_Quit ();
 return 0;
         """
-
-    let exit app = async { return _exit app }
     
     [<Import; MI (MIO.NoInlining)>]
-    let private _clear () : unit = C """ glClear (GL_COLOR_BUFFER_BIT); """
-
-    let clear () = async { return _clear () }
+    let clear () : unit = C """ glClear (GL_COLOR_BUFFER_BIT); """
 
     [<Import; MI (MIO.NoInlining)>]
-    let private _draw (app: Application) : unit = C """ SDL_GL_SwapWindow ((SDL_Window*)app.Window); """
-
-    let draw app = async { return _draw app }
+    let draw (app: Application) : unit = C """ SDL_GL_SwapWindow ((SDL_Window*)app.Window); """
 
     [<Import; MI (MIO.NoInlining)>]
-    let private _makeVbo () : int =
+    let makeVbo () : int =
         C """
 GLuint vbo;
 glGenBuffers (1, &vbo);
@@ -125,35 +117,27 @@ glBufferData (GL_ARRAY_BUFFER, 0, NULL, GL_DYNAMIC_DRAW);
 return vbo;
         """
 
-    let makeVbo () = async { return _makeVbo () }
-
     [<Import; MI (MIO.NoInlining)>]
-    let private _bufferVbo (data: Vector2 []) (size: int) (vbo: int) : unit =
+    let bufferVbo (data: Vector2 []) (size: int) (vbo: int) : unit =
         C """
 glBindBuffer (GL_ARRAY_BUFFER, vbo);
 glBufferData (GL_ARRAY_BUFFER, size, data, GL_DYNAMIC_DRAW);
         """
 
-    let bufferVbo data size vbo = async { return _bufferVbo data size vbo }
-
     [<Import; MI (MIO.NoInlining)>]
-    let private _drawArrays (first: int) (count: int) : unit =
+    let drawArrays (first: int) (count: int) : unit =
         C """
 glDrawArrays (GL_LINES, first, count);
         """
 
-    let drawArrays first count = async { return _drawArrays first count }
-
     [<Import; MI (MIO.NoInlining)>]
-    let _drawArraysLoop (first: int) (count : int) : unit =
+    let drawArraysLoop (first: int) (count : int) : unit =
         C """
 glDrawArrays (GL_LINE_LOOP, first, count);
         """
 
-    let drawArraysLoop first count = async { return _drawArraysLoop first count }
-
     [<Import; MI (MIO.NoInlining)>]
-    let private _loadShaders (vertexSource: byte[]) (fragmentSource: byte[]) : int<program> =
+    let loadShaders (vertexSource: byte[]) (fragmentSource: byte[]) : int<program> =
         C """
 // Create the shaders
 GLuint VertexShaderID = glCreateShader(GL_VERTEX_SHADER);
@@ -228,40 +212,30 @@ glEnableVertexAttribArray (posAttrib);
 return ProgramID;
         """
 
-    let loadShaders vertexSource fragmentSource = async { return _loadShaders vertexSource fragmentSource }
-
     [<Import; MI (MIO.NoInlining)>]
-    let private _getUniformProjection (program: int<program>) : int<uniform> =
+    let getUniformProjection (program: int<program>) : int<uniform> =
         C """
 return glGetUniformLocation (program, "uni_projection");
         """
 
-    let getUniformProjection program = async { return _getUniformProjection program }
-
     [<Import; MI (MIO.NoInlining)>]
-    let private _setUniformProjection (uni: int<uniform>) (m: Matrix4x4) : unit =
+    let setUniformProjection (uni: int<uniform>) (m: Matrix4x4)  : unit =
         C """
 glUniformMatrix4fv (uni, 1, GL_FALSE, &m);
-        """
-
-    let setUniformProjection uni m = async { return _setUniformProjection uni m }
+"""
 
     [<Import; MI (MIO.NoInlining)>]
-    let private _getUniformColor (program: int<program>) : int<uniform> =
+    let getUniformColor (program: int<program>) : int<uniform> =
         C """
 GLint uni_color = glGetUniformLocation (program, "uni_color");
 return uni_color;
         """
 
-    let getUniformColor program = async { return _getUniformColor program }
-
     [<Import; MI (MIO.NoInlining)>]
-    let private _setUniformColor (uniformColor: int<uniform>) (color: RenderColor) : unit =
+    let setUniformColor (uniformColor: int<uniform>) (color: RenderColor) : unit =
         C """
 glUniform4f (uniformColor, color.R, color.G, color.B, color.A);
         """
-
-    let setUniformColor uniformColor color = async { return _setUniformColor uniformColor color }
 
 module Backend =
     let loadShaders () =
