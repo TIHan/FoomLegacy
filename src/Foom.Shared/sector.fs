@@ -15,58 +15,6 @@ module PolygonFinder =
     open Foom.Shared.Geometry
     open Foom.Shared.Level.Structures
 
-    let pi = single Math.PI
-    let pi2 = pi * 2.f
-
-    let normalizeAngle a =
-        let mutable a = a
-        while a < 0.f do a <- a + pi2
-        while a >= pi2 do a <- a - pi2
-        a
-
-    let diffAngle a b =
-        let mutable d = normalizeAngle a - normalizeAngle b
-        if d < 0.f then d <- d + pi2
-        if d > pi then d <- pi2 - d
-        d
-
-    let sideOfLine (v1: Vector2) (v2: Vector2) (p: Vector2) =
-        (p.Y - v1.Y) * (v2.X - v1.X) - (p.X - v1.X) * (v2.Y - v1.Y)
-
-    let calculateRelativeAngle baseVertex (a: Linedef) (b: Linedef) =
-        let ana =
-            if a.End = baseVertex
-            then a.Angle + pi
-            else a.Angle
-
-        let anb =
-            if b.End = baseVertex
-            then b.Angle + pi
-            else b.Angle
-        
-        let mutable n = diffAngle ana anb
-
-        let va =
-            if a.Start = baseVertex
-            then a.End
-            else a.Start
-
-        let vb =
-            if b.Start = baseVertex
-            then b.End
-            else b.Start
-
-        let dir =
-            if a.End = baseVertex
-            then not a.FrontSidedef.IsSome
-            else a.FrontSidedef.IsSome
-
-        let s = sideOfLine va vb baseVertex
-        if s < 0.f && dir then n <- pi2 - n
-        if s > 0.f && not dir then n <- pi2 - n
-
-        n
-
     module Polygon =
         let ofLinedefs (sides: Linedef seq) =
             let vertices =
@@ -117,7 +65,7 @@ module PolygonFinder =
             | false, false -> s.End.Equals e.Start    
 
         member this.TryVisitNextPath () =
-            let head = this.path.Head
+            let currentLinedef = this.path.Head
             let currentVertex = this.currentVertex
             let visitedLinedefs = this.visitedLinedefs
 
@@ -127,18 +75,27 @@ module PolygonFinder =
                     (currentVertex.Equals l.Start && not (visitedLinedefs.Contains l)) ||
                     (currentVertex.Equals l.End && not (visitedLinedefs.Contains l))) with
             | [] -> this, false
-            | [path] -> this.Visit path, true
-            | paths ->
-                let p =
-                    if head.FrontSidedef.IsSome
-                    then head.End
-                    else head.Start
+            | [fork] -> this.Visit fork, true
+            | forks ->
+                let p1 =
+                    if currentVertex.Equals currentLinedef.Start
+                    then currentLinedef.End
+                    else currentLinedef.Start
 
-                let path =
-                    paths
-                    |> List.maxBy (calculateRelativeAngle currentVertex head)
+                let fork =
+                    forks
+                    |> List.minBy (fun x ->
+                        let p2 =
+                            if currentVertex.Equals x.Start
+                            then x.End
+                            else x.Start
+                            
+                        let result = Vector2.Dot (p1 - currentVertex, currentVertex - p2)
+                        if Linedef.isPointInFrontOfFacingSide p2 currentLinedef
+                        then result
+                        else result + 1.f)
 
-                this.Visit path, true
+                this.Visit fork, true
 
         member this.RemainingLinedefs =
             if this.IsPathFinished
