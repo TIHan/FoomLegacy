@@ -22,11 +22,11 @@ module Linedef =
         Vec2.angle v  
 
     let isPointInFrontOfFacingSide (p: Vector2) (linedef: Linedef) =
-        match linedef.FrontSidedef, linedef.BackSidedef with
-        | None, None -> false
-        | Some _, Some _ -> true
-        | _ ->
-            if linedef.FrontSidedef.IsSome
+        match linedef.FrontSidedef.IsSome, linedef.BackSidedef.IsSome with
+        | false, false -> false
+        | true, true -> true
+        | isFront, _ ->
+            if isFront
             then isPointOnLeftSide linedef.End linedef.Start p
             else isPointOnLeftSide linedef.Start linedef.End p
             
