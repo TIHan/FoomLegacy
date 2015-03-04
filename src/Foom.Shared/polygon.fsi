@@ -7,19 +7,19 @@ type Edge =
     val X : Vector2
     val Y : Vector2
 
-type Polygon
+type Polygon = { Vertices: Vector2 []; Children: Polygon list }
 
 [<CompilationRepresentationAttribute (CompilationRepresentationFlags.ModuleSuffix)>]
 module Polygon =
-    val create : vertices: Vector2 [] -> Polygon
+    val inline create : vertices: Vector2 [] -> Polygon
 
-    val addChild : child: Polygon -> poly: Polygon -> Polygon
+    val inline addChild : child: Polygon -> poly: Polygon -> Polygon
 
-    val addChildren : children: Polygon list -> poly: Polygon -> Polygon
+    val inline addChildren : children: Polygon list -> poly: Polygon -> Polygon
 
-    val vertices : poly: Polygon -> Vector2 []
+    val inline vertices : poly: Polygon -> Vector2 []
 
-    val children : poly: Polygon -> Polygon list
+    val inline children : poly: Polygon -> Polygon list
 
     val edges : poly: Polygon -> Edge list
 

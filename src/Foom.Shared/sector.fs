@@ -1,32 +1,17 @@
 ﻿namespace Foom.Shared.Level.Structures
 
+open System
+open System.Numerics
+open System.Collections.Immutable
+
 open Foom.Shared.Geometry
 open Foom.Shared.Level.Structures
 
 type Sector = {
     Linedefs: Linedef [] }
 
-[<RequireQualifiedAccess>]
-module PolygonFinder =
-    open System
-    open System.Numerics
-    open System.Collections.Immutable
-
-    open Foom.Shared.Geometry
-    open Foom.Shared.Level.Structures
-
-    module Polygon =
-        let ofLinedefs (sides: Linedef seq) =
-            let vertices =
-                sides
-                |> Seq.map (fun x -> 
-                    if x.FrontSidedef.IsSome
-                    then x.Start
-                    else x.End) 
-                |> Array.ofSeq
-
-            Polygon.create vertices.[..vertices.Length - 2]
-
+[<AutoOpen>]
+module Tracer =
     type Tracer =
         private { 
             baseLinedef: Linedef
@@ -35,7 +20,7 @@ module PolygonFinder =
             visitedLinedefs: ImmutableHashSet<Linedef>
             path: Linedef list }
 
-        static member private FindVertex (linedefs: Linedef list) =
+        static member private FindMinVertex (linedefs: Linedef list) =
             let s = linedefs |> List.minBy (fun x -> x.Start.X)
             let e = linedefs |> List.minBy (fun x -> x.End.X)
 
@@ -43,10 +28,10 @@ module PolygonFinder =
             then s.Start
             else e.End
 
-        static member private FindSideByVertex (v: Vector2) (linedefs: Linedef list) =
+        static member private FindLinedefByVertex (v: Vector2) (linedefs: Linedef list) =
             match linedefs |> List.tryFind (fun x -> x.Start.Equals v) with
             | None -> linedefs |> List.find (fun x -> x.End.Equals v)
-            | Some side -> side
+            | Some linedef -> linedef
 
         member private this.Visit (linedef: Linedef) =
             { this with
@@ -64,7 +49,7 @@ module PolygonFinder =
             | false, true -> s.End.Equals e.End
             | false, false -> s.End.Equals e.Start    
 
-        member this.TryVisitNextPath () =
+        member this.TryVisitNextLinedef () =
             let currentLinedef = this.path.Head
             let currentVertex = this.currentVertex
             let visitedLinedefs = this.visitedLinedefs
@@ -72,30 +57,31 @@ module PolygonFinder =
             match
                 this.linedefs
                 |> List.filter (fun l -> 
-                    (currentVertex.Equals l.Start && not (visitedLinedefs.Contains l)) ||
-                    (currentVertex.Equals l.End && not (visitedLinedefs.Contains l))) with
+                    (currentVertex.Equals l.Start || currentVertex.Equals l.End) && not (visitedLinedefs.Contains l)) with
             | [] -> this, false
-            | [fork] -> this.Visit fork, true
-            | forks ->
+            | [linedef] -> this.Visit linedef, true
+            | linedefs ->
                 let p1 =
                     if currentVertex.Equals currentLinedef.Start
                     then currentLinedef.End
                     else currentLinedef.Start
 
-                let fork =
-                    forks
+                let dir1 = Vector2.Normalize (p1 - currentVertex)
+
+                let linedef =
+                    linedefs
                     |> List.minBy (fun x ->
                         let p2 =
                             if currentVertex.Equals x.Start
                             then x.End
                             else x.Start
                             
-                        let result = Vector2.Dot (p1 - currentVertex, currentVertex - p2)
-                        if Linedef.isPointInFrontOfFacingSide p2 currentLinedef
+                        let result = Vector2.Dot (dir1, Vector2.Normalize (currentVertex - p2))
+                        if Linedef.isPointOnFrontSide p2 currentLinedef
                         then result
-                        else result + 1.f)
+                        else 2.f + (result * -1.f))
 
-                this.Visit fork, true
+                this.Visit linedef, true
 
         member this.RemainingLinedefs =
             if this.IsPathFinished
@@ -111,13 +97,27 @@ module PolygonFinder =
 
         static member Create (linedefs: Linedef seq) =            
             let linedefs = linedefs |> List.ofSeq 
-            let baseLinedef = Tracer.FindSideByVertex (Tracer.FindVertex linedefs) linedefs
+            let baseLinedef = Tracer.FindLinedefByVertex (Tracer.FindMinVertex linedefs) linedefs
 
             { baseLinedef = baseLinedef
               currentVertex = Vector2.Zero
               linedefs = linedefs
               visitedLinedefs = ImmutableHashSet<Linedef>.Empty
               path = [baseLinedef] }.Visit baseLinedef
+
+[<RequireQualifiedAccess>]
+module PolygonFinder =
+    module Polygon =
+        let ofLinedefs (sides: Linedef seq) =
+            let vertices =
+                sides
+                |> Seq.map (fun x -> 
+                    if x.FrontSidedef.IsSome
+                    then x.Start
+                    else x.End) 
+                |> Array.ofSeq
+
+            Polygon.create vertices.[..vertices.Length - 2]
 
     let tryFindPolygon (linedefs: Linedef list) =
         let rec f (tracer: Tracer) =
@@ -131,12 +131,11 @@ module PolygonFinder =
                 poly,
                 tracer.RemainingLinedefs
             else
-                match tracer.TryVisitNextPath () with
+                match tracer.TryVisitNextLinedef () with
                 | tracer, true -> f tracer
                 | tracer, _ -> None, tracer.RemainingLinedefs
 
-        Tracer.Create linedefs
-        |> f
+        f (Tracer.Create linedefs)
 
     let find sector =
         let rec f (polygons: Polygon list) = function
@@ -157,9 +156,9 @@ module PolygonFinder =
         
         let linedefs =
             sector.Linedefs
+            |> Seq.filter (fun x -> not (x.FrontSidedef.IsSome && x.BackSidedef.IsSome))
             |> Seq.distinctBy (fun x -> x.Start, x.End)
             |> List.ofSeq
-            |> List.filter (fun x -> not (x.FrontSidedef.IsSome && x.BackSidedef.IsSome))
         f [] linedefs
 
 [<CompilationRepresentationAttribute (CompilationRepresentationFlags.ModuleSuffix)>]

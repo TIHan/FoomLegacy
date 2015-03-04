@@ -14,15 +14,15 @@ type Polygon = { Vertices: Vector2 []; Children: Polygon list }
 
 [<CompilationRepresentationAttribute (CompilationRepresentationFlags.ModuleSuffix)>]
 module Polygon =
-    let create vertices = { Vertices = vertices; Children = [] }
+    let inline create vertices = { Vertices = vertices; Children = [] }
 
-    let addChild child poly = { poly with Children = child :: poly.Children }
+    let inline addChild child poly = { poly with Children = child :: poly.Children }
 
-    let addChildren children poly = { poly with Children = poly.Children @ children }
+    let inline addChildren children poly = { poly with Children = poly.Children @ children }
 
-    let vertices poly = poly.Vertices
+    let inline vertices poly = poly.Vertices
 
-    let children poly = poly.Children
+    let inline children poly = poly.Children
 
     let edges poly =
         let length = poly.Vertices.Length
@@ -40,7 +40,7 @@ module Polygon =
         | x when x <= 0.f -> false
         | _ -> true
 
-    let cross v1 v2 = (Vector3.Cross (Vector3(v1, 0.f), Vector3(v2, 0.f))).Z
+    let inline cross v1 v2 = (Vector3.Cross (Vector3(v1, 0.f), Vector3(v2, 0.f))).Z
         
     let isArrangedClockwise poly =
         let length = poly.Vertices.Length

@@ -21,7 +21,7 @@ module Linedef =
         let v = linedef.End - linedef.Start
         Vec2.angle v  
 
-    let isPointInFrontOfFacingSide (p: Vector2) (linedef: Linedef) =
+    let isPointOnFrontSide (p: Vector2) (linedef: Linedef) =
         match linedef.FrontSidedef.IsSome, linedef.BackSidedef.IsSome with
         | false, false -> false
         | true, true -> true
