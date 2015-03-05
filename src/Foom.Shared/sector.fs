@@ -82,89 +82,55 @@ module Tracer =
                     this.Visit linedef, true
 
         member this.Run () =
-            let linedefs = this.NonVisitedLinedefs ()
+            let rec f (paths: Linedef list list) (firstTracer: Tracer) (tracer: Tracer) =
+                match tracer.TryVisitNextLinedef () with
+                | tracer, true -> f paths firstTracer tracer
+                | tracer, _ -> 
+                    let isFinished = tracer.IsFinished
+                    let tracer = if isFinished then tracer else firstTracer
+
+                    let linedefs = tracer.NonVisitedLinedefs ()
+                    if linedefs.Length > 0 then 
+                        let paths = (tracer.path :: paths)
+                        let newTracer = Tracer.Create linedefs
+                        if isFinished then f (tracer.path :: paths) newTracer newTracer else f paths newTracer newTracer
+                    else paths
+                        
+            f [] this this
+
+        static member Create (linedefs: Linedef list) =
             let linedef = Tracer.FindClosestLinedef linedefs
 
-            let firstTracer =
-                { this with
-                    endVertex = if linedef.FrontSidedef.IsSome then linedef.Start else linedef.End
-                    currentVertex = Vector2.Zero
-                    linedefs = linedefs
-                    path = [linedef] }.Visit linedef
-
-            let rec f (tracer: Tracer) =
-                if tracer.NonVisitedLinedefs()
-                match tracer.TryVisitNextLinedef () with
-                | tracer, true -> f tracer
-                | tracer, _ -> 
-                    if tracer.IsFinished then 
-                    tracer.NonVisitedLinedefs ()
-
-        static member Create (linedefs: Linedef seq) =
-            let tracer = {
-                endVertex = Vector2.Zero
-                currentVertex = Vector2.Zero
-                linedefs = linedefs |> List.ofSeq
-                visitedLinedefs = ImmutableHashSet<Linedef>.Empty
-                path = [] }
-
-            tracer.StartTrace ()
+            { endVertex = if linedef.FrontSidedef.IsSome then linedef.Start else linedef.End
+              currentVertex = Vector2.Zero
+              linedefs = linedefs
+              visitedLinedefs = ImmutableHashSet<Linedef>.Empty
+              path = [] }.Visit linedef
 
 [<RequireQualifiedAccess>]
 module PolygonFinder =
     module Polygon =
-        let ofLinedefs (sides: Linedef seq) =
+        let ofLinedefs (linedefs: Linedef list) =
             let vertices =
-                sides
-                |> Seq.map (fun x -> 
+                linedefs
+                |> List.map (fun x -> 
                     if x.FrontSidedef.IsSome
                     then x.Start
                     else x.End) 
-                |> Array.ofSeq
+                |> Array.ofList
 
             Polygon.create vertices.[..vertices.Length - 2]
 
-    let tryFindPolygon (linedefs: Linedef list) =
-        let rec f (tracer: Tracer) =
-            match tracer.TryVisitNextLinedef () with
-            | tracer, true -> f tracer
-            | tracer, _ ->
-                if tracer.IsPathFinished
-                then 
-                    let poly =
-                        match tracer.Path with
-                        | [] -> None
-                        | [_;_] -> None
-                        | path -> Some (Polygon.ofLinedefs path)
-                    poly,
-                    tracer.RemainingLinedefs
-                else None, tracer.RemainingLinedefs
-
-        f (Tracer.Create linedefs)
-
-    let find sector =
-        let rec f (polygons: Polygon list) = function
-            | [] -> polygons
-            | linedefs -> 
-                match tryFindPolygon linedefs with
-                | Some poly, linedefs -> 
-                    let linedefsInPolygon, linedefs =
-                        linedefs
-                        |> List.partition (fun x ->
-                            Polygon.isPointInside x.Start poly &&
-                            Polygon.isPointInside x.End poly)
-
-                    let poly = Polygon.addChildren (f [] linedefsInPolygon) poly
-                
-                    f (poly :: polygons) linedefs
-                | _, sides -> f polygons sides
-        
+    let find sector =        
         let linedefs =
             sector.Linedefs
             |> Seq.filter (fun x -> not (x.FrontSidedef.IsSome && x.BackSidedef.IsSome))
             |> Seq.distinctBy (fun x -> x.Start, x.End)
             |> List.ofSeq
-        f [] linedefs
+        
+        let tracer = Tracer.Create linedefs
+        let paths = tracer.Run ()
+        paths |> List.map (fun x -> Polygon.ofLinedefs x)
 
 [<CompilationRepresentationAttribute (CompilationRepresentationFlags.ModuleSuffix)>]
 module Sector =

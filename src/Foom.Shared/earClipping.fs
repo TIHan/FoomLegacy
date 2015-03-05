@@ -6,4 +6,4 @@ open System.Numerics
 open Foom.Shared.Geometry
 
 let compute (poly: Polygon) =
-    List.empty<Triangle2>
+    List.empty<Vector3 []>
