@@ -7,4 +7,4 @@ open Foom.Shared.Level.Structures
 
 [<CompilationRepresentationAttribute (CompilationRepresentationFlags.ModuleSuffix)>]
 module LinedefTracer =
-    val run : Linedef list -> Linedef list list
+    val run : Linedef seq -> Linedef list list

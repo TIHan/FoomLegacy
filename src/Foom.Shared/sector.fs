@@ -19,5 +19,5 @@ module Polygon =
 [<CompilationRepresentationAttribute (CompilationRepresentationFlags.ModuleSuffix)>]
 module Sector =
     let polygonFlats sector = 
-        LinedefTracer.run (sector.Linedefs |> List.ofArray)
+        LinedefTracer.run (sector.Linedefs)
         |> List.map (Polygon.ofLinedefs)
