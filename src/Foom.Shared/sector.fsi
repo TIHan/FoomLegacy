@@ -7,4 +7,4 @@ type Sector = {
 
 [<CompilationRepresentationAttribute (CompilationRepresentationFlags.ModuleSuffix)>]
 module Sector =
-    val polygons : Sector -> Polygon list
+    val polygonFlats : Sector -> Polygon list

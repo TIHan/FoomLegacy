@@ -64,6 +64,8 @@
     <Compile Include="earClipping.fs" />
     <Compile Include="sidedef.fs" />
     <Compile Include="linedef.fs" />
+    <Compile Include="linedefTracer.fsi" />
+    <Compile Include="linedefTracer.fs" />
     <Compile Include="sector.fsi" />
     <Compile Include="sector.fs" />
     <Compile Include="level.fs" />
