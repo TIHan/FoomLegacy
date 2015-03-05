@@ -60,8 +60,6 @@
     <Compile Include="vec2.fs" />
     <Compile Include="polygon.fsi" />
     <Compile Include="polygon.fs" />
-    <Compile Include="triangle2.fsi" />
-    <Compile Include="triangle2.fs" />
     <Compile Include="earClipping.fsi" />
     <Compile Include="earClipping.fs" />
     <Compile Include="sidedef.fs" />

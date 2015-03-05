@@ -20,11 +20,7 @@ module Tracer =
             visitedLinedefs: ImmutableHashSet<Linedef>
             path: Linedef list }
 
-        member inline private this.NonVisitedLinedefs () = 
-            this.linedefs |> List.filter (not << this.visitedLinedefs.Contains)
-
-        member private this.FindClosestLinedef () =
-            let linedefs = this.NonVisitedLinedefs ()
+        static member private FindClosestLinedef (linedefs: Linedef list) =
             let s = linedefs |> List.minBy (fun x -> x.Start.X)
             let e = linedefs |> List.minBy (fun x -> x.End.X)
 
@@ -37,18 +33,19 @@ module Tracer =
             | None -> linedefs |> List.find (fun x -> x.End.Equals v)
             | Some linedef -> linedef
 
+        member inline private this.NonVisitedLinedefs () = 
+            this.linedefs |> List.filter (not << this.visitedLinedefs.Contains)
+
         member private this.Visit (linedef: Linedef) =
             { this with
                 currentVertex = if linedef.FrontSidedef.IsSome then linedef.End else linedef.Start
                 visitedLinedefs = this.visitedLinedefs.Add linedef
                 path = linedef :: this.path }  
 
-        member this.IsPathFinished = this.currentVertex.Equals this.endVertex   
+        member private this.IsFinished = this.currentVertex.Equals this.endVertex   
 
-        member this.Path = this.path  
-
-        member this.TryVisitNextLinedef () =
-            match this.IsPathFinished with
+        member private this.TryVisitNextLinedef () =
+            match this.IsFinished with
             | true -> this, false
             | _ ->
                 let currentLinedef = this.path.Head
@@ -84,13 +81,24 @@ module Tracer =
 
                     this.Visit linedef, true
 
-        member this.StartTrace () =
-            let linedef = this.FindClosestLinedef ()
+        member this.Run () =
+            let linedefs = this.NonVisitedLinedefs ()
+            let linedef = Tracer.FindClosestLinedef linedefs
 
-            { this with
-                endVertex = if linedef.FrontSidedef.IsSome then linedef.Start else linedef.End
-                currentVertex = Vector2.Zero
-                path = [linedef] }.Visit linedef
+            let firstTracer =
+                { this with
+                    endVertex = if linedef.FrontSidedef.IsSome then linedef.Start else linedef.End
+                    currentVertex = Vector2.Zero
+                    linedefs = linedefs
+                    path = [linedef] }.Visit linedef
+
+            let rec f (tracer: Tracer) =
+                if tracer.NonVisitedLinedefs()
+                match tracer.TryVisitNextLinedef () with
+                | tracer, true -> f tracer
+                | tracer, _ -> 
+                    if tracer.IsFinished then 
+                    tracer.NonVisitedLinedefs ()
 
         static member Create (linedefs: Linedef seq) =
             let tracer = {
