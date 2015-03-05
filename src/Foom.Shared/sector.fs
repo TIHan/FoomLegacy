@@ -91,7 +91,6 @@ module Tracer =
 
                     let linedefs = tracer.NonVisitedLinedefs ()
                     if linedefs.Length > 0 then 
-                        let paths = (tracer.path :: paths)
                         let newTracer = Tracer.Create linedefs
                         if isFinished then f (tracer.path :: paths) newTracer newTracer else f paths newTracer newTracer
                     else paths
@@ -119,7 +118,7 @@ module PolygonFinder =
                     else x.End) 
                 |> Array.ofList
 
-            Polygon.create vertices.[..vertices.Length - 2]
+            Polygon.create vertices.[..vertices.Length - 1]
 
     let find sector =        
         let linedefs =
@@ -134,4 +133,6 @@ module PolygonFinder =
 
 [<CompilationRepresentationAttribute (CompilationRepresentationFlags.ModuleSuffix)>]
 module Sector =
-    let polygons sector = PolygonFinder.find sector
+    let polygons sector = 
+        let polygons = PolygonFinder.find sector
+        polygons
