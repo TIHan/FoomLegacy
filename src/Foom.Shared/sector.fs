@@ -14,21 +14,25 @@ type Sector = {
 module Tracer =
     type Tracer =
         private { 
-            baseLinedef: Linedef
+            endVertex: Vector2
             currentVertex: Vector2
             linedefs: Linedef list
             visitedLinedefs: ImmutableHashSet<Linedef>
             path: Linedef list }
 
-        static member private FindMinVertex (linedefs: Linedef list) =
+        member inline private this.NonVisitedLinedefs () = 
+            this.linedefs |> List.filter (not << this.visitedLinedefs.Contains)
+
+        member private this.FindClosestLinedef () =
+            let linedefs = this.NonVisitedLinedefs ()
             let s = linedefs |> List.minBy (fun x -> x.Start.X)
             let e = linedefs |> List.minBy (fun x -> x.End.X)
 
-            if s.Start.X <= e.End.X 
-            then s.Start
-            else e.End
+            let v =
+                if s.Start.X <= e.End.X 
+                then s.Start
+                else e.End
 
-        static member private FindLinedefByVertex (v: Vector2) (linedefs: Linedef list) =
             match linedefs |> List.tryFind (fun x -> x.Start.Equals v) with
             | None -> linedefs |> List.find (fun x -> x.End.Equals v)
             | Some linedef -> linedef
@@ -39,71 +43,64 @@ module Tracer =
                 visitedLinedefs = this.visitedLinedefs.Add linedef
                 path = linedef :: this.path }  
 
-        member this.IsPathFinished =
-            let s = this.baseLinedef
-            let e = this.path.Head
-
-            match s.FrontSidedef.IsSome, e.FrontSidedef.IsSome with
-            | true, true -> s.Start.Equals e.End
-            | true, false -> s.Start.Equals e.Start
-            | false, true -> s.End.Equals e.End
-            | false, false -> s.End.Equals e.Start    
-
-        member this.TryVisitNextLinedef () =
-            let currentLinedef = this.path.Head
-            let currentVertex = this.currentVertex
-            let visitedLinedefs = this.visitedLinedefs
-
-            match
-                this.linedefs
-                |> List.filter (fun l -> 
-                    (currentVertex.Equals l.Start || currentVertex.Equals l.End) && not (visitedLinedefs.Contains l)) with
-            | [] -> this, false
-            | [linedef] -> this.Visit linedef, true
-            | linedefs ->
-                let p1 =
-                    if currentVertex.Equals currentLinedef.Start
-                    then currentLinedef.End
-                    else currentLinedef.Start
-
-                let dir1 = Vector2.Normalize (p1 - currentVertex)
-
-                let linedef =
-                    linedefs
-                    |> List.minBy (fun x ->
-                        let p2 =
-                            if currentVertex.Equals x.Start
-                            then x.End
-                            else x.Start
-                            
-                        let result = Vector2.Dot (dir1, Vector2.Normalize (currentVertex - p2))
-                        if Linedef.isPointOnFrontSide p2 currentLinedef
-                        then result
-                        else 2.f + (result * -1.f))
-
-                this.Visit linedef, true
-
-        member this.RemainingLinedefs =
-            if this.IsPathFinished
-            then 
-                this.linedefs 
-                |> List.filter (fun x -> 
-                    not (this.visitedLinedefs.Contains x))
-            else
-                this.linedefs
-                |> List.filter (fun x -> not <| x.Equals this.baseLinedef)
+        member this.IsPathFinished = this.currentVertex.Equals this.endVertex   
 
         member this.Path = this.path  
 
-        static member Create (linedefs: Linedef seq) =            
-            let linedefs = linedefs |> List.ofSeq 
-            let baseLinedef = Tracer.FindLinedefByVertex (Tracer.FindMinVertex linedefs) linedefs
+        member this.TryVisitNextLinedef () =
+            match this.IsPathFinished with
+            | true -> this, false
+            | _ ->
+                let currentLinedef = this.path.Head
+                let currentVertex = this.currentVertex
+                let visitedLinedefs = this.visitedLinedefs
 
-            { baseLinedef = baseLinedef
-              currentVertex = Vector2.Zero
-              linedefs = linedefs
-              visitedLinedefs = ImmutableHashSet<Linedef>.Empty
-              path = [baseLinedef] }.Visit baseLinedef
+                match
+                    this.linedefs
+                    |> List.filter (fun l -> 
+                        (currentVertex.Equals l.Start || currentVertex.Equals l.End) && not (visitedLinedefs.Contains l)) with
+                | [] -> this, false
+                | [linedef] -> this.Visit linedef, true
+                | linedefs ->
+                    let p1 =
+                        if currentVertex.Equals currentLinedef.Start
+                        then currentLinedef.End
+                        else currentLinedef.Start
+
+                    let dir1 = Vector2.Normalize (p1 - currentVertex)
+
+                    let linedef =
+                        linedefs
+                        |> List.minBy (fun x ->
+                            let p2 =
+                                if currentVertex.Equals x.Start
+                                then x.End
+                                else x.Start
+                            
+                            let result = Vector2.Dot (dir1, Vector2.Normalize (currentVertex - p2))
+                            if Linedef.isPointOnFrontSide p2 currentLinedef
+                            then result
+                            else 2.f + (result * -1.f))
+
+                    this.Visit linedef, true
+
+        member this.StartTrace () =
+            let linedef = this.FindClosestLinedef ()
+
+            { this with
+                endVertex = if linedef.FrontSidedef.IsSome then linedef.Start else linedef.End
+                currentVertex = Vector2.Zero
+                path = [linedef] }.Visit linedef
+
+        static member Create (linedefs: Linedef seq) =
+            let tracer = {
+                endVertex = Vector2.Zero
+                currentVertex = Vector2.Zero
+                linedefs = linedefs |> List.ofSeq
+                visitedLinedefs = ImmutableHashSet<Linedef>.Empty
+                path = [] }
+
+            tracer.StartTrace ()
 
 [<RequireQualifiedAccess>]
 module PolygonFinder =
@@ -121,19 +118,19 @@ module PolygonFinder =
 
     let tryFindPolygon (linedefs: Linedef list) =
         let rec f (tracer: Tracer) =
-            if tracer.IsPathFinished
-            then 
-                let poly =
-                    match tracer.Path with
-                    | [] -> None
-                    | [_;_] -> None
-                    | path -> Some (Polygon.ofLinedefs path)
-                poly,
-                tracer.RemainingLinedefs
-            else
-                match tracer.TryVisitNextLinedef () with
-                | tracer, true -> f tracer
-                | tracer, _ -> None, tracer.RemainingLinedefs
+            match tracer.TryVisitNextLinedef () with
+            | tracer, true -> f tracer
+            | tracer, _ ->
+                if tracer.IsPathFinished
+                then 
+                    let poly =
+                        match tracer.Path with
+                        | [] -> None
+                        | [_;_] -> None
+                        | path -> Some (Polygon.ofLinedefs path)
+                    poly,
+                    tracer.RemainingLinedefs
+                else None, tracer.RemainingLinedefs
 
         f (Tracer.Create linedefs)
 

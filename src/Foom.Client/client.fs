@@ -48,16 +48,30 @@ type ClientState = {
 
 let init () =
     let wadFile = WadManager.openWad "sunder.wad"
-    let lvl = WadManager.loadLevel "map10" wadFile
+    let lvl = WadManager.loadLevel "map14" wadFile
     let app = Renderer.init ()
     let vbo = Renderer.makeVbo ()
     let program = Backend.loadShaders ()
     let uniformColor = Renderer.getUniformColor program
     let uniformProjection = Renderer.getUniformProjection program
 
+    let stopwatch = System.Diagnostics.Stopwatch.StartNew()
+
     let sectorPolygons =
-        lvl.Sectors
+        [|lvl.Sectors.[4371]|]
         |> Array.map Sector.polygons
+
+    stopwatch.Stop ()
+
+    let stopwatch = System.Diagnostics.Stopwatch.StartNew()
+
+    let sectorPolygons =
+        [|lvl.Sectors.[4371]|]
+        |> Array.map Sector.polygons
+
+    stopwatch.Stop ()
+
+    printfn "TIME: %A" stopwatch.ElapsedMilliseconds
 
     let vertices =
         match sectorPolygons with
