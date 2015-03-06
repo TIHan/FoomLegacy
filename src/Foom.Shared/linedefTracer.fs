@@ -8,6 +8,7 @@ open Foom.Shared.Level.Structures
 type LinedefTracer = { 
     endVertex: Vector2
     currentVertex: Vector2
+    currentLinedef: Linedef
     linedefs: Linedef list
     visitedLinedefs: ImmutableHashSet<Linedef>
     path: Linedef list }
@@ -46,6 +47,7 @@ module LinedefTracer =
     let visit (linedef: Linedef) (tracer: LinedefTracer) =
         { tracer with
             currentVertex = if linedef.FrontSidedef.IsSome then linedef.End else linedef.Start
+            currentLinedef = linedef
             visitedLinedefs = tracer.visitedLinedefs.Add linedef
             path = linedef :: tracer.path }  
 
@@ -53,10 +55,11 @@ module LinedefTracer =
         let linedef = findClosestLinedef linedefs
 
         { endVertex = if linedef.FrontSidedef.IsSome then linedef.Start else linedef.End
-          currentVertex = Vector2.Zero
+          currentVertex = if linedef.FrontSidedef.IsSome then linedef.End else linedef.Start
+          currentLinedef = linedef
           linedefs = linedefs
-          visitedLinedefs = ImmutableHashSet<Linedef>.Empty
-          path = [] } |> visit linedef 
+          visitedLinedefs = ImmutableHashSet<Linedef>.Empty.Add linedef
+          path = [linedef] }
 
     let inline isFinished (tracer: LinedefTracer) = tracer.currentVertex.Equals tracer.endVertex 
 
@@ -64,14 +67,14 @@ module LinedefTracer =
         if isFinished tracer
         then tracer, false
         else
-            let currentLinedef = tracer.path.Head
+            let currentLinedef = tracer.currentLinedef
             let currentVertex = tracer.currentVertex
             let visitedLinedefs = tracer.visitedLinedefs
 
             match
                 tracer.linedefs
                 |> List.filter (fun l -> 
-                    (currentVertex.Equals l.Start || currentVertex.Equals l.End) && not (visitedLinedefs.Contains l)) with
+                    (currentVertex.Equals (if l.FrontSidedef.IsSome then l.Start else l.End)) && not (visitedLinedefs.Contains l)) with
             | [] -> tracer, false
             | [linedef] -> visit linedef tracer, true
             | linedefs ->
