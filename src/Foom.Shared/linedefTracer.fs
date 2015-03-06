@@ -51,7 +51,7 @@ module LinedefTracer =
             visitedLinedefs = tracer.visitedLinedefs.Add linedef
             path = linedef :: tracer.path }  
 
-    let createWithoutFilter (linedefs: Linedef list) =
+    let create linedefs =
         let linedef = findClosestLinedef linedefs
 
         { endVertex = if linedef.FrontSidedef.IsSome then linedef.Start else linedef.End
@@ -61,53 +61,43 @@ module LinedefTracer =
           visitedLinedefs = ImmutableHashSet<Linedef>.Empty.Add linedef
           path = [linedef] }
 
-    let inline isFinished (tracer: LinedefTracer) = tracer.currentVertex.Equals tracer.endVertex 
+    let inline isFinished tracer = tracer.currentVertex.Equals tracer.endVertex 
 
-    let tryVisitNextLinedef (tracer: LinedefTracer) =
+    let inline currentDirection tracer =
+        let v =
+            if tracer.currentLinedef.FrontSidedef.IsSome
+            then tracer.currentLinedef.Start
+            else tracer.currentLinedef.End
+
+        Vector2.Normalize (v - tracer.currentVertex)
+
+    let tryVisitNextLinedef tracer =
         if isFinished tracer
         then tracer, false
         else
-            let currentLinedef = tracer.currentLinedef
-            let currentVertex = tracer.currentVertex
-            let visitedLinedefs = tracer.visitedLinedefs
-
             match
                 tracer.linedefs
                 |> List.filter (fun l -> 
-                    (currentVertex.Equals (if l.FrontSidedef.IsSome then l.Start else l.End)) && not (visitedLinedefs.Contains l)) with
+                    (tracer.currentVertex.Equals (if l.FrontSidedef.IsSome then l.Start else l.End)) && 
+                    not (tracer.visitedLinedefs.Contains l)) with
             | [] -> tracer, false
             | [linedef] -> visit linedef tracer, true
             | linedefs ->
-                let p1 =
-                    if currentVertex.Equals currentLinedef.Start
-                    then currentLinedef.End
-                    else currentLinedef.Start
-
-                let dir1 = Vector2.Normalize (p1 - currentVertex)
+                let dir = currentDirection tracer
 
                 let linedef =
                     linedefs
-                    |> List.minBy (fun x ->
-                        let p2 =
-                            if currentVertex.Equals x.Start
-                            then x.End
-                            else x.Start
-                            
-                        let result = Vector2.Dot (dir1, Vector2.Normalize (currentVertex - p2))
-                        if isPointOnFrontSide p2 currentLinedef
+                    |> List.minBy (fun l ->
+                        let v = if l.FrontSidedef.IsSome then l.End else l.Start                          
+                        let result = Vector2.Dot (dir, Vector2.Normalize (tracer.currentVertex - v))
+
+                        if isPointOnFrontSide v tracer.currentLinedef
                         then result
                         else 2.f + (result * -1.f))
 
                 visit linedef tracer, true
 
     let run linedefs =
-        let linedefs =
-            linedefs
-            |> Seq.filter (fun x -> not (x.FrontSidedef.IsSome && x.BackSidedef.IsSome))
-            |> Seq.distinctBy (fun x -> x.Start, x.End)
-            |> List.ofSeq      
-        let tracer = createWithoutFilter linedefs
-
         let rec f (paths: Linedef list list) (originalTracer: LinedefTracer) (tracer: LinedefTracer) =
             match tryVisitNextLinedef tracer with
             | tracer, true -> f paths originalTracer tracer
@@ -119,7 +109,16 @@ module LinedefTracer =
                 match nonVisitedLinedefs tracer with
                 | [] -> paths
                 | linedefs ->
-                    let tracer = createWithoutFilter linedefs
+                    let tracer = create linedefs
                     f paths tracer tracer
+
+        let tracer =
+            linedefs
+            |> Seq.filter (fun x -> 
+                not (x.FrontSidedef.IsSome && x.BackSidedef.IsSome) &&
+                not (x.FrontSidedef.IsNone && x.BackSidedef.IsNone)) 
+            |> Seq.distinctBy (fun x -> x.Start, x.End)
+            |> List.ofSeq
+            |> create
                         
         f [] tracer tracer   
