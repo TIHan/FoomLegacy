@@ -74,12 +74,10 @@
     <Compile Include="Sector.fs" />
     <Compile Include="Level.fsi" />
     <Compile Include="Level.fs" />
-    <Compile Include="Wad.fsi" />
-    <Compile Include="Wad.fs" />
     <Compile Include="UnpickleWad.fsi" />
     <Compile Include="UnpickleWad.fs" />
-    <Compile Include="WadManager.fsi" />
-    <Compile Include="WadManager.fs" />
+    <Compile Include="Wad.fsi" />
+    <Compile Include="Wad.fs" />
     <Compile Include="UserCommand.fsi" />
     <Compile Include="UserCommand.fs" />
     <Content Include="packages.config" />

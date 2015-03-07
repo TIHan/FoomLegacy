@@ -27,7 +27,7 @@ module LiteReadStream =
 
     let seek offset lstream =
         match lstream.Stream with
-        | None ->  lstream.position <- int offset
+        | None -> lstream.position <- int offset
         | Some stream -> stream.Position <- offset
 
     let skip (n: int64) lstream = 

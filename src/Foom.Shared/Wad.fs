@@ -1,109 +1,78 @@
 ﻿namespace Foom.Shared.Wad
 
 open System
+open System.IO
 open System.Numerics
 
-type Header = { IsPwad: bool; LumpCount: int; LumpOffset: int }
- 
-type LumpHeader = { Offset: int32; Size: int32; Name: string }
- 
-type Wad = { Header: Header; LumpHeaders: LumpHeader [] }
+open Foom.Shared.Wad.Pickler
 
-type ThingDataFormat =
-    | Doom = 0
-    | Hexen = 1
+open Foom.Shared.Level
+open Foom.Shared.Level.Structures
 
-[<Flags>]
-type DoomThingDataFlags =
-    | SkillLevelOneAndTwo = 0x001
-    | SkillLevelThree = 0x002
-    | SkillLevelFourAndFive = 0x004
-    | Deaf = 0x008
-    | NotInSinglePlayer = 0x0010
-//    | NotInDeathmatch = 0x0020 // boom
-//    | NotInCoop = 0x0040 // boom
-//    | FriendlyMonster = 0x0080 // MBF
+type Wad = {
+    file: FileStream
+    data: WadData } with
 
-[<Flags>]
-type HexenThingDataFlags =
-    | SkillLevelOneAndTwo = 0x001
-    | SkillLevelThree = 0x002
-    | SkillLevelFourAndFive = 0x004
-    | Deaf = 0x008
-    | Dormant = 0x0010
-    | AppearOnlyToFighterClass = 0x0020
-    | AppearOnlyToClericClass = 0x0040
-    | AppearOnlyToMageClass = 0x0080
-    | AppearOnlyInSinglePlayer = 0x0100
-    | AppearOnlyInCoop = 0x0200
-    | AppearOnlyInDeathmatch = 0x0400
- 
-type DoomThingData = { X: int; Y: int; Angle: int; Flags: DoomThingDataFlags }
+    interface IDisposable with
+        member this.Dispose () =
+            this.file.Close ()
+            this.file.Dispose ()
 
-type HexenThingData = { Id: int; X: int; Y: int; StartingHeight: int; Angle: int; Flags: HexenThingDataFlags; Arg1: byte; Arg2: byte; Arg3: byte; Arg4: byte; Arg5: byte }
+[<CompilationRepresentationAttribute (CompilationRepresentationFlags.ModuleSuffix)>]
+module Wad =
+    
+    open FSharp.LitePickler.Core
+    open FSharp.LitePickler.Unpickle
 
-type ThingData =
-    | Doom of DoomThingData
-    | Hexen of HexenThingData
+    open Foom.Shared.Wad.Pickler.UnpickleWad
 
-[<Flags>]
-type LinedefDataFlags =
-    | BlocksPlayersAndMonsters = 0x0001
-    | BlocksMonsters = 0x0002
-    | TwoSided = 0x0004
-    | UpperTextureUnpegged = 0x0008
-    | LowerTextureUnpegged = 0x0010
-    | Secret = 0x0020
-    | BlocksSound = 0x0040
-    | NerverShowsOnAutomap = 0x0080
-    | AlwaysShowsOnAutomap = 0x0100
+    let openFile fileName =
+        let file = File.Open (fileName, FileMode.Open)
+        let wad = u_run u_wad <| LiteReadStream.ofStream file
+        file.Position <- 0L
+        { file = file; data = wad }
 
-type SidedefData = {
-    OffsetX: int
-    OffsetY: int
-    UpperTextureName: string
-    LowerTextureName: string
-    MiddleTextureName: string
-    SectorNumber: int }
+    let loadLevel (name: string) (wad: Wad) : Level =
+        let name = name.ToLower ()
 
-type DoomLinedefData = { 
-    Flags: LinedefDataFlags
-    SpecialType: int
-    SectorTag: int }
+        let lumpLevelStartIndex =
+            wad.data.LumpHeaders
+            |> Array.findIndex (fun x -> x.Name.ToLower () = name)
 
-type LinedefData =
-    | Doom of x: Vector2 * y: Vector2 * front: SidedefData option * back: SidedefData option * DoomLinedefData
+        printfn "Found Level: %s" name
+        let lumpHeaders = wad.data.LumpHeaders.[lumpLevelStartIndex..]
 
-type SectorDataType =
-    | Normal = 0
-    | BlinkLightRandom = 1
-    | BlinkLightHalfASecond = 2
-    | BlinkLightdOneSecond = 3
-    | TwentyPercentDamagePerSecondPlusBlinkLightHalfASecond = 4
-    | TenPercentDamagePerSecond = 5
-    | FivePercentDamagePerSecond = 7
-    | LightOscillates = 8
-    | PlayerEnteringSectorGetsCreditForFindingASecret = 9
-    | ThirtySecondsAfterLevelStartCeilingClosesLikeADoor = 10
-    | CancelGodModeAndTwentyPercentDamagePerSecondAndWhenPlayerDiesLevelEnds = 11
-    | BlinkLightHalfASecondSync = 12
-    | BlinkLightOneSecondSync = 13
-    | ThreeHundredSecondsAfterLevelStartCeilingOpensLikeADoor = 14
-    | TwentyPercentDamagePerSecond = 16
-    | FlickerLightRandomly = 17
+        let lumpLinedefsHeader = lumpHeaders |> Array.find (fun x -> x.Name.ToLower () = "LINEDEFS".ToLower ())
+        let lumpSidedefsHeader = lumpHeaders |> Array.find (fun x -> x.Name.ToLower () = "SIDEDEFS".ToLower ())
+        let lumpVerticesHeader = lumpHeaders |> Array.find (fun x -> x.Name.ToLower () = "VERTEXES".ToLower ())
+        let lumpSectorsHeader = lumpHeaders |> Array.find (fun x -> x.Name.ToLower () = "SECTORS".ToLower ())
 
-type SectorData = {
-    FloorHeight: int
-    CeilingHeight: int
-    FloorTextureName: string
-    CeilingTextureName: string
-    LightLevel: int
-    Type: SectorDataType;
-    Tag: int
-    Linedefs: LinedefData [] }
+        let loadLump u (header: LumpHeader) =
+            let l = u_run (u header.Size (int64 header.Offset)) <| LiteReadStream.ofStream wad.file
+            wad.file.Position <- 0L
+            l
 
-type LumpThings = { Things: ThingData [] }
-type LumpLinedefs = { Linedefs: LinedefData [] }
-type LumpSidedefs = { Sidedefs: SidedefData [] }
-type LumpVertices = { Vertices: Vector2 [] }
-type LumpSectors = { Sectors: SectorData [] }
+        let lumpVertices = loadLump u_lumpVertices lumpVerticesHeader
+        let lumpSidedefs = loadLump u_lumpSidedefs lumpSidedefsHeader
+        let lumpLinedefs = loadLump (u_lumpLinedefs lumpVertices.Vertices lumpSidedefs.Sidedefs) lumpLinedefsHeader
+        let lumpSectors = loadLump (u_lumpSectors lumpLinedefs.Linedefs) lumpSectorsHeader
+
+        let sectors : Sector [] =
+            lumpSectors.Sectors
+            |> Array.mapi (fun i sector ->
+                let lines =
+                    sector.Linedefs
+                    |> Array.map (
+                        function 
+                        | LinedefData.Doom (x, y, f, b, data) -> 
+                            { Start = x
+                              End = y
+                              FrontSidedef = match f with | Some f when f.SectorNumber = i -> Some (Sidedef ()) | _ -> None
+                              BackSidedef = match b with | Some b when b.SectorNumber = i -> Some (Sidedef ()) | _ -> None }
+                            |> Some)
+                    |> Array.filter (fun x -> x.IsSome)
+                    |> Array.map (fun x -> x.Value)
+                { Linedefs = lines }
+            )
+
+        { Sectors = sectors }

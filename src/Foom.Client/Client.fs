@@ -5,7 +5,7 @@ open System.Drawing
 open System.Numerics
 
 open Foom.Renderer
-open Foom.Shared.IO
+open Foom.Shared.Wad
 open Foom.Shared.UserCommand
 open Foom.Shared.Geometry
 open Foom.Shared.Level
@@ -47,8 +47,8 @@ type ClientState = {
 // 271 - map03 sunder
 
 let init () =
-    let wadFile = WadManager.openWad "sunder.wad"
-    let lvl = WadManager.loadLevel "map14" wadFile
+    use wad = Wad.openFile "sunder.wad"
+    let lvl = Wad.loadLevel "map14" wad
     let app = Renderer.init ()
     let vbo = Renderer.makeVbo ()
     let program = Backend.loadShaders ()
