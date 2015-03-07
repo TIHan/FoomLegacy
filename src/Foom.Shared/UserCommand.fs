@@ -1,10 +1,10 @@
 ﻿namespace Foom.Shared.UserCommand
 
 type UserCommand =
-    | MapZoomIn = 0
-    | MapZoomOut = 1
-    | BeginMapMove = 2
-    | EndMapMove = 3
+    | MapZoomIn
+    | MapZoomOut
+    | BeginMapMove
+    | EndMapMove
 
 type UserCommandState =
     { commands: UserCommand list }

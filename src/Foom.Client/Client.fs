@@ -159,8 +159,6 @@ let update (userCmd: UserCommandState) (mouse: MouseState) (client: ClientState)
 
             | UserCommand.BeginMapMove -> { state with User = { state.User with IsMapMoving = true } }
             | UserCommand.EndMapMove -> { state with User = { state.User with IsMapMoving = false } }
-
-            | _ -> state
         ) client
 
 
