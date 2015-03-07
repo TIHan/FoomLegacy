@@ -57,6 +57,8 @@
     <Error Condition="!Exists('$(SolutionDir)\.nuget\NuGet.targets')" Text="$([System.String]::Format('$(ErrorText)', '$(SolutionDir)\.nuget\NuGet.targets'))" />
   </Target>
   <ItemGroup>
+    <Compile Include="LitePicklerCore.fs" />
+    <Compile Include="LitePicklerUnpickle.fs" />
     <Compile Include="Vec2.fs" />
     <Compile Include="Polygon.fsi" />
     <Compile Include="Polygon.fs" />
@@ -83,9 +85,6 @@
     <Content Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <Reference Include="FSharp.LitePickler">
-      <HintPath>..\..\lib\FSharp.LitePickler.dll</HintPath>
-    </Reference>
     <Reference Include="mscorlib" />
     <Reference Include="System" />
     <Reference Include="System.Collections.Immutable">
