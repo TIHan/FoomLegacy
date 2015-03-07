@@ -1,10 +1,9 @@
-﻿module FSharp.Game.Data.Wad.Unpickle
+﻿module Foom.Shared.Wad.UnpickleWad
 
 open System
 open System.Numerics
 open FSharp.LitePickler.Core
 open FSharp.LitePickler.Unpickle
-open FSharp.Game.Data.Wad
 
 let inline u_arrayi n (p: int -> Unpickle<'a>) =
     fun stream ->

@@ -57,22 +57,29 @@
     <Error Condition="!Exists('$(SolutionDir)\.nuget\NuGet.targets')" Text="$([System.String]::Format('$(ErrorText)', '$(SolutionDir)\.nuget\NuGet.targets'))" />
   </Target>
   <ItemGroup>
-    <Compile Include="vec2.fs" />
-    <Compile Include="polygon.fsi" />
-    <Compile Include="polygon.fs" />
-    <Compile Include="earClipping.fsi" />
-    <Compile Include="earClipping.fs" />
-    <Compile Include="sidedef.fs" />
-    <Compile Include="linedef.fs" />
-    <Compile Include="linedefTracer.fsi" />
-    <Compile Include="linedefTracer.fs" />
-    <Compile Include="sector.fsi" />
-    <Compile Include="sector.fs" />
-    <Compile Include="level.fs" />
-    <Compile Include="wad.fs" />
-    <Compile Include="unpickleWad.fs" />
-    <Compile Include="wadManager.fs" />
-    <Compile Include="userCommand.fs" />
+    <Compile Include="Vec2.fs" />
+    <Compile Include="Polygon.fsi" />
+    <Compile Include="Polygon.fs" />
+    <Compile Include="EarClipping.fsi" />
+    <Compile Include="EarClipping.fs" />
+    <Compile Include="Sidedef.fsi" />
+    <Compile Include="Sidedef.fs" />
+    <Compile Include="Linedef.fsi" />
+    <Compile Include="Linedef.fs" />
+    <Compile Include="LinedefTracer.fsi" />
+    <Compile Include="LinedefTracer.fs" />
+    <Compile Include="Sector.fsi" />
+    <Compile Include="Sector.fs" />
+    <Compile Include="Level.fsi" />
+    <Compile Include="Level.fs" />
+    <Compile Include="Wad.fsi" />
+    <Compile Include="Wad.fs" />
+    <Compile Include="UnpickleWad.fsi" />
+    <Compile Include="UnpickleWad.fs" />
+    <Compile Include="WadManager.fsi" />
+    <Compile Include="WadManager.fs" />
+    <Compile Include="UserCommand.fsi" />
+    <Compile Include="UserCommand.fs" />
     <Content Include="packages.config" />
   </ItemGroup>
   <ItemGroup>

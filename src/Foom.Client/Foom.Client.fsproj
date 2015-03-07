@@ -61,9 +61,9 @@
   </Target>
   <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
   <ItemGroup>
-    <Compile Include="input.fsi" />
-    <Compile Include="input.fs" />
-    <Compile Include="client.fs" />
+    <Compile Include="Input.fsi" />
+    <Compile Include="Input.fs" />
+    <Compile Include="Client.fs" />
     <Content Include="packages.config" />
   </ItemGroup>
   <ItemGroup>

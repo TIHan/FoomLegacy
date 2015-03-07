@@ -61,7 +61,7 @@
   </Target>
   <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
   <ItemGroup>
-    <Compile Include="renderer.fs" />
+    <Compile Include="Renderer.fs" />
     <None Include="f.fragment">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

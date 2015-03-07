@@ -1,7 +1,5 @@
 ﻿namespace Foom.Shared.UserCommand
 
-open System.Collections.Immutable
-
 type UserCommand =
     | MapZoomIn = 0
     | MapZoomOut = 1
@@ -9,7 +7,7 @@ type UserCommand =
     | EndMapMove = 3
 
 type UserCommandState =
-    private { commands: UserCommand list }
+    { commands: UserCommand list }
 
     static member Default = { commands = [] }
 

@@ -51,7 +51,7 @@
   </Choose>
   <Import Project="$(FSharpTargetsPath)" />
   <ItemGroup>
-    <Compile Include="server.fs" />
+    <Compile Include="Server.fs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="mscorlib" />

@@ -6,8 +6,7 @@ open System.Numerics
 
 open FSharp.LitePickler.Unpickle
 
-open FSharp.Game.Data.Wad
-open FSharp.Game.Data.Wad.Unpickle
+open Foom.Shared.Wad
 
 open Foom.Shared.Level
 open Foom.Shared.Level.Structures
@@ -19,7 +18,7 @@ type WadFile = private {
 module WadManager =
     let openWad fileName =
         let file = File.Open (fileName, FileMode.Open)
-        let wad = u_run u_wad <| LiteReadStream.ofStream file
+        let wad = u_run UnpickleWad.u_wad <| LiteReadStream.ofStream file
         file.Position <- 0L
         { File = file; Wad = wad }
 
@@ -47,10 +46,10 @@ module WadManager =
             wad.File.Position <- 0L
             l
 
-        let lumpVertices = loadLump u_lumpVertices lumpVerticesHeader
-        let lumpSidedefs = loadLump u_lumpSidedefs lumpSidedefsHeader
-        let lumpLinedefs = loadLump (u_lumpLinedefs lumpVertices.Vertices lumpSidedefs.Sidedefs) lumpLinedefsHeader
-        let lumpSectors = loadLump (u_lumpSectors lumpLinedefs.Linedefs) lumpSectorsHeader
+        let lumpVertices = loadLump UnpickleWad.u_lumpVertices lumpVerticesHeader
+        let lumpSidedefs = loadLump UnpickleWad.u_lumpSidedefs lumpSidedefsHeader
+        let lumpLinedefs = loadLump (UnpickleWad.u_lumpLinedefs lumpVertices.Vertices lumpSidedefs.Sidedefs) lumpLinedefsHeader
+        let lumpSectors = loadLump (UnpickleWad.u_lumpSectors lumpLinedefs.Linedefs) lumpSectorsHeader
 
         let sectors : Sector [] =
             lumpSectors.Sectors
