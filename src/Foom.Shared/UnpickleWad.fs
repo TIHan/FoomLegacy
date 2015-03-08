@@ -239,3 +239,13 @@ module UnpickleWad =
 
     let u_lumpSectors (linedefs: LinedefData []) size offset : Unpickle<LumpSectors> =
         u_lookAhead (u_sectors linedefs (size / sectorSize) offset) |>> fun sectors -> { Sectors = sectors }
+
+    [<Literal>]
+    let flatSize = 4096
+    let u_flats count offset : Unpickle<byte [] []> =
+        u_skipBytes offset >>. u_array count (u_bytes flatSize)
+
+    let u_lumpFlats size offset : Unpickle<byte [] []> =
+        u_lookAhead (u_flats (size / flatSize) offset) |>> id
+
+    

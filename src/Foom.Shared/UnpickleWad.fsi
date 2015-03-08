@@ -127,3 +127,5 @@ module UnpickleWad =
     val u_lumpLinedefs : vertices: Vector2 [] -> sidedefs: SidedefData [] -> size: int -> offset: int64 -> Unpickle<LumpLinedefs>
 
     val u_lumpSectors : linedefs: LinedefData [] -> size: int -> offset: int64 -> Unpickle<LumpSectors>
+
+    val u_lumpFlats : size: int -> offset: int64 -> Unpickle<byte [] []>

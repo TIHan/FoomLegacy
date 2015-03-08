@@ -47,8 +47,8 @@ type ClientState = {
 // 271 - map03 sunder
 
 let init () =
-    use wad = Wad.openFile "sunder.wad"
-    let lvl = Wad.loadLevel "map01" wad
+    use wad = Wad.openFile "freedoom1.wad"
+    let lvl = Wad.loadLevel "e1m1" wad
     let app = Renderer.init ()
     let vbo = Renderer.makeVbo ()
     let program = Backend.loadShaders ()

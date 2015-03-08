@@ -46,9 +46,18 @@ module Wad =
         let lumpSidedefsHeader = lumpHeaders |> Array.find (fun x -> x.Name.ToLower () = "SIDEDEFS".ToLower ())
         let lumpVerticesHeader = lumpHeaders |> Array.find (fun x -> x.Name.ToLower () = "VERTEXES".ToLower ())
         let lumpSectorsHeader = lumpHeaders |> Array.find (fun x -> x.Name.ToLower () = "SECTORS".ToLower ())
+        let lumpFlatsHeader = lumpHeaders |> Array.find (fun x -> x.Name.ToUpper () = "F_START")
+        let lumpFlatsHeaderEnd = lumpHeaders |> Array.find (fun x -> x.Name.ToUpper () = "F_END")
+        let lumpPaletteHeader = lumpHeaders |> Array.find (fun x -> x.Name.ToUpper () = "PLAYPAL")
+        let lumpColormapHeader = lumpHeaders |> Array.find (fun x -> x.Name.ToUpper () = "COLORMAP")
 
         let loadLump u (header: LumpHeader) =
             let l = u_run (u header.Size (int64 header.Offset)) <| LiteReadStream.ofStream wad.file
+            wad.file.Position <- 0L
+            l
+
+        let loadLumpMarker u (markerStart: LumpHeader) (markerEnd: LumpHeader) =
+            let l = u_run (u (markerEnd.Offset - markerStart.Offset) (int64 markerStart.Offset)) <| LiteReadStream.ofStream wad.file
             wad.file.Position <- 0L
             l
 
@@ -56,6 +65,7 @@ module Wad =
         let lumpSidedefs = loadLump u_lumpSidedefs lumpSidedefsHeader
         let lumpLinedefs = loadLump (u_lumpLinedefs lumpVertices.Vertices lumpSidedefs.Sidedefs) lumpLinedefsHeader
         let lumpSectors = loadLump (u_lumpSectors lumpLinedefs.Linedefs) lumpSectorsHeader
+        let lumpFlats = loadLumpMarker u_lumpFlats lumpFlatsHeader lumpFlatsHeaderEnd
 
         let sectors : Sector [] =
             lumpSectors.Sectors
