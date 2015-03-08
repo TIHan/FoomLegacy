@@ -66,6 +66,21 @@ module Wad =
         let lumpLinedefs = loadLump (u_lumpLinedefs lumpVertices.Vertices lumpSidedefs.Sidedefs) lumpLinedefsHeader
         let lumpSectors = loadLump (u_lumpSectors lumpLinedefs.Linedefs) lumpSectorsHeader
         let lumpFlats = loadLumpMarker u_lumpFlats lumpFlatsHeader lumpFlatsHeaderEnd
+        let lumpPalettes = loadLump u_lumpPalettes lumpPaletteHeader
+
+        let palette = lumpPalettes.[0]
+        let flats =
+            lumpFlats
+            |> Array.map (fun x ->
+                x |> Array.map (fun y -> palette.Pixels.[int y]))
+            |> Array.map (fun pixels ->
+                let bmp = new System.Drawing.Bitmap (64, 64)
+
+                for i = 0 to 64 - 1 do
+                    for j = 0 to 64 - 1 do
+                        let pixel = pixels.[i + (j * 64)]
+                        bmp.SetPixel (i, j, Drawing.Color.FromArgb (int pixel.R, int pixel.G, int pixel.B))
+                bmp)
 
         let sectors : Sector [] =
             lumpSectors.Sectors

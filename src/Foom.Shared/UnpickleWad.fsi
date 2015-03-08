@@ -110,6 +110,16 @@ type LumpSidedefs = { Sidedefs: SidedefData [] }
 type LumpVertices = { Vertices: Vector2 [] }
 type LumpSectors = { Sectors: SectorData [] }
 
+[<Struct>]
+type PixelData =
+    val R : byte
+    val G : byte
+    val B : byte
+
+    new : byte * byte * byte -> PixelData
+
+type PaletteData = { Pixels: PixelData [] }
+
 module UnpickleWad =
 
     val u_lumpHeader : Unpickle<LumpHeader>
@@ -129,3 +139,5 @@ module UnpickleWad =
     val u_lumpSectors : linedefs: LinedefData [] -> size: int -> offset: int64 -> Unpickle<LumpSectors>
 
     val u_lumpFlats : size: int -> offset: int64 -> Unpickle<byte [] []>
+
+    val u_lumpPalettes : size: int -> offset: int64 -> Unpickle<PaletteData []>

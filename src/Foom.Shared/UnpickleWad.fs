@@ -110,6 +110,16 @@ type LumpSidedefs = { Sidedefs: SidedefData [] }
 type LumpVertices = { Vertices: Vector2 [] }
 type LumpSectors = { Sectors: SectorData [] }
 
+[<Struct>]
+type PixelData =
+    val R : byte
+    val G : byte
+    val B : byte
+
+    new (r, g, b) = { R = r; G = g; B = b }
+
+type PaletteData = { Pixels: PixelData [] }
+
 module UnpickleWad =
 
     let inline u_arrayi n (p: int -> Unpickle<'a>) =
@@ -248,4 +258,17 @@ module UnpickleWad =
     let u_lumpFlats size offset : Unpickle<byte [] []> =
         u_lookAhead (u_flats (size / flatSize) offset) |>> id
 
-    
+    [<Literal>]
+    let paletteSize = 768
+    let u_pixel =
+        u_pipe3 u_byte u_byte u_byte <| fun r g b -> PixelData (r, g, b)
+
+    let u_pixels count = u_array count u_pixel
+
+    let u_palette = (u_pixels (768 / sizeof<PixelData>)) |>> fun pixels -> { Pixels = pixels }
+
+    let u_palettes count offset : Unpickle<PaletteData []> =
+        u_skipBytes offset >>. u_array count (u_palette)
+
+    let u_lumpPalettes size offset : Unpickle<PaletteData []> =
+        u_lookAhead (u_palettes (size / paletteSize) offset)
