@@ -5,7 +5,7 @@ open System.Drawing
 open System.Numerics
 
 open Foom.Renderer
-open Foom.Shared.Wad
+open Foom.Shared.WadManager
 open Foom.Shared.UserCommand
 open Foom.Shared.Geometry
 open Foom.Shared.Level
@@ -47,8 +47,8 @@ type ClientState = {
 // 271 - map03 sunder
 
 let init () =
-    use wad = Wad.openFile "freedoom1.wad"
-    let lvl = Wad.loadLevel "e1m1" wad
+    let wm = WadManager.create "freedoom1.wad" |> Async.RunSynchronously
+    let lvl = WadManager.findLevel "e1m1" wm |> Async.RunSynchronously
     let app = Renderer.init ()
     let vbo = Renderer.makeVbo ()
     let program = Backend.loadShaders ()

@@ -143,9 +143,21 @@ module UnpickleWad =
     let u_lumpHeaders count offset : Unpickle<LumpHeader []> =
         u_skipBytes offset >>. u_array count u_lumpHeader
 
+    let filterLumpHeaders (lumpHeaders: LumpHeader []) =
+        lumpHeaders
+        |> Array.filter (fun x ->
+            match x.Name.ToUpper () with
+            | "F1_START" -> false
+            | "F2_START" -> false
+            | "F3_START" -> false
+            | "F1_END" -> false
+            | "F2_END" -> false
+            | "F3_END" -> false
+            | _ -> true)
+
     let u_wad : Unpickle<WadData> =
         u_lookAhead u_header >>= fun header ->
-            (u_lookAhead <| (u_lumpHeaders header.LumpCount (int64 header.LumpOffset)) |>> (fun lumpHeaders -> { Header = header; LumpHeaders = lumpHeaders }))
+            (u_lookAhead <| (u_lumpHeaders header.LumpCount (int64 header.LumpOffset)) |>> (fun lumpHeaders -> { Header = header; LumpHeaders = filterLumpHeaders lumpHeaders }))
 
     [<Literal>]
     let doomThingSize = 10
@@ -252,11 +264,6 @@ module UnpickleWad =
 
     [<Literal>]
     let flatSize = 4096
-    let u_flats count offset : Unpickle<byte [] []> =
-        u_skipBytes offset >>. u_array count (u_bytes flatSize)
-
-    let u_lumpFlats size offset : Unpickle<byte [] []> =
-        u_lookAhead (u_flats (size / flatSize) offset) |>> id
 
     [<Literal>]
     let paletteSize = 768
@@ -272,3 +279,6 @@ module UnpickleWad =
 
     let u_lumpPalettes size offset : Unpickle<PaletteData []> =
         u_lookAhead (u_palettes (size / paletteSize) offset)
+
+    let u_lumpRaw size offset : Unpickle<byte []> =
+        u_lookAhead (u_skipBytes offset >>. u_bytes size)
