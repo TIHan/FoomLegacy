@@ -1,4 +1,4 @@
-﻿namespace Foom.Shared.WadManager
+﻿namespace Foom.Shared.Wad
 
 open System
 open System.IO
@@ -13,7 +13,7 @@ open Foom.Shared.Level.Structures
 open FSharp.LitePickler.Core
 open FSharp.LitePickler.Unpickle
 
-type WadManager = 
+type Wad = 
     {
         fileName: string
         wadData: WadData
@@ -22,7 +22,7 @@ type WadManager =
     }
 
 [<CompilationRepresentationAttribute (CompilationRepresentationFlags.ModuleSuffix)>]
-module WadManager =
+module Wad =
 
     open Foom.Shared.Wad.Pickler.UnpickleWad       
 
@@ -63,29 +63,29 @@ module WadManager =
             return { wad with defaultPaletteData = Some lumpPalettes.[0] }
         }
         
-    let loadFlats wm =
-        match wm.defaultPaletteData with
+    let loadFlats wad =
+        match wad.defaultPaletteData with
         | None ->
             printfn "Warning: Unable to load flat textures because there is no default palette."
-            async { return wm }
+            async { return wad }
         | Some palette ->
-            let fileName = wm.fileName
-            let lumpHeaders = wm.wadData.LumpHeaders
+            let fileName = wad.fileName
+            let lumpHeaders = wad.wadData.LumpHeaders
 
             let lumpFlatsHeaderStartIndex = lumpHeaders |> Array.tryFindIndex (fun x -> x.Name.ToUpper () = "F_START")
             let lumpFlatsHeaderEndIndex = lumpHeaders |> Array.tryFindIndex (fun x -> x.Name.ToUpper () = "F_END")
 
             match lumpFlatsHeaderStartIndex, lumpFlatsHeaderEndIndex with
             | None, None -> 
-                async { return wm }
+                async { return wad }
 
             | Some _, None ->
                 printfn """Warning: Unable to load flat textures because "F_END" lump was not found."""
-                async { return wm }
+                async { return wad }
 
             | None, Some _ ->
                 printfn """Warning: Unable to load flat textures because "F_START" lump was not found."""
-                async { return wm }
+                async { return wad }
 
             | Some lumpFlatsHeaderStartIndex, Some lumpFlatsHeaderEndIndex ->
                 let lumpFlatHeaders =
@@ -113,29 +113,29 @@ module WadManager =
                                     bmp.SetPixel (i, j, Drawing.Color.FromArgb (int pixel.R, int pixel.G, int pixel.B))
                             bmp)
 
-                    return { wm with flats = flats }
+                    return { wad with flats = flats }
                 }
 
-    let create initialWadFileName = async {
-        let! wadData = runUnpickle u_wad initialWadFileName
+    let create wadFileName = async {
+        let! wadData = runUnpickle u_wad wadFileName
 
         return!
-            { fileName = initialWadFileName; wadData = wadData; defaultPaletteData = None; flats = [||] }
+            { fileName = wadFileName; wadData = wadData; defaultPaletteData = None; flats = [||] }
             |> (loadPalettes >=> loadFlats)
     }
 
-    let findLevel (levelName: string) wm =
-        let fileName = wm.fileName
+    let findLevel (levelName: string) wad =
+        let fileName = wad.fileName
         let name = levelName.ToLower ()
 
         match
-            wm.wadData.LumpHeaders
+            wad.wadData.LumpHeaders
             |> Array.tryFindIndex (fun x -> x.Name.ToLower () = name.ToLower ()) with
         | None -> async { return failwithf "Unable to find level, %s." name }
         | Some lumpLevelStartIndex ->
 
         printfn "Found Level: %s" name
-        let lumpHeaders = wm.wadData.LumpHeaders.[lumpLevelStartIndex..]
+        let lumpHeaders = wad.wadData.LumpHeaders.[lumpLevelStartIndex..]
 
         let lumpLinedefsHeader = lumpHeaders |> Array.find (fun x -> x.Name.ToLower () = "LINEDEFS".ToLower ())
         let lumpSidedefsHeader = lumpHeaders |> Array.find (fun x -> x.Name.ToLower () = "SIDEDEFS".ToLower ())

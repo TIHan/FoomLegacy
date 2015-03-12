@@ -126,7 +126,7 @@ let main argv =
             Input.pollEvents ()
         )
         (fun time interval curr ->
-            GC.Collect ()
+            GC.Collect (2, GCCollectionMode.Forced, true)
 
             let input = Input.getState ()
 
